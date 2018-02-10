@@ -119,6 +119,50 @@ shinyServer(function(input, output, session) {
             data
     
         })
+        
+        
+        dataCombine <- reactive({
+            
+            data <- dataHold()
+            
+            data <- data[order(data$Wavelength),]
+            data$Intensity <- SMA(data$Intensity, 10)
+            data$Spectrum <- rep("Combined", length(data$Intensity))
+            
+            data
+
+        })
+        
+        dataBackgroundSubtract <- reactive({
+            
+            data <- if(input$combine==FALSE){
+                dataHold()
+            } else if(input$combine==TRUE){
+                dataCombine()
+            }
+            
+            data$Intensity <- Hodder.v(data$Intensity)
+            
+            data
+
+            
+        })
+        
+        
+        dataManipulate <- reactive({
+            
+            if(input$combine==FALSE && input$backgroundsubtract==FALSE){
+                dataHold()
+            } else if(input$combine==TRUE && input$backgroundsubtract==FALSE){
+                dataCombine()
+            }  else if(input$combine==TRUE && input$backgroundsubtract==TRUE){
+                dataBackgroundSubtract()
+            } else if(input$combine==FALSE && input$backgroundsubtract==TRUE){
+                dataBackgroundSubtract()
+            }
+            
+            
+        })
 
 
         dataCount <- reactive({
@@ -138,7 +182,7 @@ shinyServer(function(input, output, session) {
         
          plotInput <- reactive({
              
-             data <- dataHold()
+             data <- dataManipulate()
 
              n <- length(data$Wavelength)
              
@@ -151,7 +195,7 @@ shinyServer(function(input, output, session) {
              scale_y_continuous("Intensity") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y)
              
-             combine <- ggplot(data[order(data$Wavelength),], aes(Wavelength, SMA(Intensity, 10))) +
+             combine <- ggplot(data, aes(Wavelength, Intensity)) +
              geom_line() +
              theme_light()+
              theme(legend.position="bottom") +
@@ -159,20 +203,11 @@ shinyServer(function(input, output, session) {
              scale_y_continuous("Intensity") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y)
              
-             backgroundsubtract <- ggplot(data, aes(Wavelength, Hodder.v(Intensity), colour=Spectrum)) +
-             geom_line() +
-             theme_light()+
-             theme(legend.position="bottom") +
-             scale_colour_discrete("Spectrum") +
-             scale_x_reverse("Wavelength (nm)") +
-             scale_y_continuous("Intensity") +
-             coord_cartesian(xlim = ranges$x, ylim = ranges$y)
+
              
-             if(input$backgroundsubtract==TRUE && input$combine==FALSE){
-                 backgroundsubtract
-             } else if(input$backgroundsubtract==FALSE && input$combine==FALSE){
+             if(input$combine==FALSE){
                  normal
-             } else if(input$backgroundsubtract==FALSE && input$combine==TRUE){
+             } else if(input$combine==TRUE){
                  combine
              }
              
@@ -206,7 +241,7 @@ shinyServer(function(input, output, session) {
         
         output$hover_info_spectrum <- renderUI({
             
-            point.table <- dataHold()
+            point.table <- dataManipulate()
 
             hover <- input$plot_hover_spectrum
             point <- nearPoints(point.table,  coordinfo=hover,   threshold = 5, maxpoints = 1, addDist = TRUE)
