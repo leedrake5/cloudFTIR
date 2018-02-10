@@ -16,6 +16,7 @@ library(rmarkdown)
 library(XML)
 library(corrplot)
 library(scales)
+library(TTR)
 
 
 shinyServer(function(input, output, session) {
@@ -141,7 +142,7 @@ shinyServer(function(input, output, session) {
 
              n <- length(data$Wavelength)
              
-             ggplot(data, aes(Wavelength, Intensity, colour=Spectrum)) +
+            normal <- ggplot(data, aes(Wavelength, Intensity, colour=Spectrum)) +
              geom_line() +
              theme_light()+
              theme(legend.position="bottom") +
@@ -149,6 +150,31 @@ shinyServer(function(input, output, session) {
              scale_x_reverse("Wavelength (nm)") +
              scale_y_continuous("Intensity") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y)
+             
+             combine <- ggplot(data[order(data$Wavelength),], aes(Wavelength, SMA(Intensity, 10))) +
+             geom_line() +
+             theme_light()+
+             theme(legend.position="bottom") +
+             scale_x_reverse("Wavelength (nm)") +
+             scale_y_continuous("Intensity") +
+             coord_cartesian(xlim = ranges$x, ylim = ranges$y)
+             
+             backgroundsubtract <- ggplot(data, aes(Wavelength, Hodder.v(Intensity), colour=Spectrum)) +
+             geom_line() +
+             theme_light()+
+             theme(legend.position="bottom") +
+             scale_colour_discrete("Spectrum") +
+             scale_x_reverse("Wavelength (nm)") +
+             scale_y_continuous("Intensity") +
+             coord_cartesian(xlim = ranges$x, ylim = ranges$y)
+             
+             if(input$backgroundsubtract==TRUE && input$combine==FALSE){
+                 backgroundsubtract
+             } else if(input$backgroundsubtract==FALSE && input$combine==FALSE){
+                 normal
+             } else if(input$backgroundsubtract==FALSE && input$combine==TRUE){
+                 combine
+             }
              
 
              
