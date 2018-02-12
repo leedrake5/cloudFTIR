@@ -250,8 +250,8 @@ shinyServer(function(input, output, session) {
             data <- dataHold()
             brush <- input$plot1_brush
             if (!is.null(brush)) {
-                ranges$x <- c(brush$xmin*mean(data$Wavelength), brush$xmax*max(data$Wavelength))
-                ranges$y <- c(brush$ymin*mean(data$Intensity), brush$ymax*max(data$Intensity))
+                ranges$x <- c(brush$xmin, brush$xmax)
+                ranges$y <- c(brush$ymin, brush$ymax)
                 
             } else {
                 ranges$x <- NULL

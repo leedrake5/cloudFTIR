@@ -6,6 +6,7 @@ library(data.table)
 library(dtplyr)
 library(rhandsontable)
 library(Cairo)
+library(shinyWidgets)
 
 
 ui=list(
@@ -24,10 +25,17 @@ sidebarPanel(
 
 textInput('projectname', label = "Project Name", value="myFTIR"),
 
+
+dropdownButton(
+tags$h3("Manual Changes"), icon = icon("gear"),
 checkboxInput('advanced', "Advanced", value=FALSE),
 checkboxInput('backgroundsubtract', "Background Subtract", value=FALSE),
 checkboxInput('combine', "Combine", value=FALSE),
 checkboxInput('invert', "Invert", value=FALSE),
+tooltip = tooltipOptions(title = "Click for manual options")
+),
+
+
 
 
 uiOutput('gainshiftui'),
