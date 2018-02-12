@@ -17,7 +17,7 @@ library(XML)
 library(corrplot)
 library(scales)
 library(TTR)
-
+library(peakPick)
 
 shinyServer(function(input, output, session) {
     
@@ -171,6 +171,27 @@ shinyServer(function(input, output, session) {
             length(inFile$datapath)
     
         })
+        
+        findPeaks <- reactive({
+            
+            data <- dataManipulate()
+            
+            as.vector(peakpick(matrix(data[,3], ncol=1), input$spikesensitivity, peak.npos=input$spikeheight)[,1])
+            
+        })
+        
+        
+        peakTable <- reactive({
+            
+            dataManipulate()[findPeaks(),]
+            
+        })
+        
+        output$peaktable <- renderDataTable({
+            
+            peakTable()
+            
+        })
 
 
         observeEvent(input$actionplot, {
@@ -186,39 +207,43 @@ shinyServer(function(input, output, session) {
 
              n <- length(data$Wavelength)
              
-            normal <- ggplot(data, aes(Wavelength, Intensity, colour=Spectrum)) +
-             geom_line() +
+            normal <- ggplot(data) +
+             geom_line(aes(Wavelength, Intensity, colour=Spectrum)) +
              theme_light()+
              theme(legend.position="bottom") +
              scale_colour_discrete("Spectrum") +
              scale_x_reverse("Wavelength (nm)", breaks=seq(0, 4000, 250)) +
              scale_y_continuous("Intensity") +
-             coord_cartesian(xlim = ranges$x, ylim = ranges$y)
+             coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
+             geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3)
              
-             combine <- ggplot(data, aes(Wavelength, Intensity)) +
-             geom_line() +
+             combine <- ggplot(data) +
+             geom_line(aes(Wavelength, Intensity)) +
              theme_light()+
              theme(legend.position="bottom") +
              scale_x_reverse("Wavelength (nm)", breaks=seq(0, 4000, 250)) +
              scale_y_continuous("Intensity") +
-             coord_cartesian(xlim = ranges$x, ylim = ranges$y)
+             coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
+             geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3)
              
-             normal.invert <- ggplot(data, aes(Wavelength, Intensity, colour=Spectrum)) +
-             geom_line() +
+             normal.invert <- ggplot(data) +
+             geom_line(aes(Wavelength, Intensity, colour=Spectrum)) +
              theme_light()+
              theme(legend.position="bottom") +
              scale_colour_discrete("Spectrum") +
              scale_x_reverse("Wavelength (nm)", breaks=seq(0, 4000, 250)) +
              scale_y_reverse("Intensity") +
-             coord_cartesian(xlim = ranges$x, ylim = ranges$y)
+             coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
+             geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3)
              
-             combine.invert <- ggplot(data, aes(Wavelength, Intensity)) +
-             geom_line() +
+             combine.invert <- ggplot(data) +
+             geom_line(aes(Wavelength, Intensity)) +
              theme_light()+
              theme(legend.position="bottom") +
              scale_x_reverse("Wavelength (nm)", breaks=seq(0, 4000, 250)) +
              scale_y_reverse("Intensity") +
-             coord_cartesian(xlim = ranges$x, ylim = ranges$y)
+             coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
+             geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3)
              
 
              

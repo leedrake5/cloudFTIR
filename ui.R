@@ -25,26 +25,34 @@ sidebarPanel(
 
 textInput('projectname', label = "Project Name", value="myFTIR"),
 
+tags$hr(),
+
+actionButton('actionprocess', label = "Process Data"),
+actionButton('actionplot', label = "Plot Spectrum"),
+downloadButton('downloadPlot', "Plot"),
+
+
 
 dropdownButton(
 tags$h3("Manual Changes"), icon = icon("gear"),
 checkboxInput('advanced', "Advanced", value=FALSE),
+uiOutput('gainshiftui'),
 checkboxInput('backgroundsubtract', "Background Subtract", value=FALSE),
 checkboxInput('combine', "Combine", value=FALSE),
 checkboxInput('invert', "Invert", value=FALSE),
 tooltip = tooltipOptions(title = "Click for manual options")
 ),
 
+dropdownButton(
+tags$h3("Analytics"), icon = icon("code"),
+checkboxInput('peaks', "Show Peaks", value=FALSE),
+sliderInput('spikesensitivity', "Spike Sensitivity", min=0.1, max=100, value=20),
+sliderInput('spikeheight', "Spike Height", min=0.1, max=100, value=20),
+tooltip = tooltipOptions(title = "Click for analytics")
+),
 
 
 
-uiOutput('gainshiftui'),
-             
-             tags$hr(),
-
-actionButton('actionprocess', label = "Process Data"),
-actionButton('actionplot', label = "Plot Spectrum"),
-downloadButton('downloadPlot', "Plot"),
 
 
 tags$hr(),
@@ -56,6 +64,8 @@ selectInput('filetype', label="Filetype", c("DPT", "CSV"), selected="DPT")
 
 
 mainPanel(
+tabsetPanel(
+tabPanel("Plot",
 
 div(
 style = "position:relative",
@@ -64,10 +74,11 @@ dblclick = 'plot1_dblclick',
 brush = brushOpts(id = 'plot1_brush', resetOnNew = TRUE),
 hover = hoverOpts('plot_hover_spectrum', delay = 100, delayType = "debounce")),
 uiOutput('hover_info_spectrum'))
-)
+),
+tabPanel("Table", dataTableOutput('peaktable'))
 ))
 )
-
+))
 
 ))
 )
