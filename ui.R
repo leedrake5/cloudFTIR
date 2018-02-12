@@ -27,6 +27,8 @@ textInput('projectname', label = "Project Name", value="myFTIR"),
 checkboxInput('advanced', "Advanced", value=FALSE),
 checkboxInput('backgroundsubtract', "Background Subtract", value=FALSE),
 checkboxInput('combine', "Combine", value=FALSE),
+checkboxInput('invert', "Invert", value=FALSE),
+
 
 uiOutput('gainshiftui'),
              

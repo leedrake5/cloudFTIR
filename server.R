@@ -191,7 +191,7 @@ shinyServer(function(input, output, session) {
              theme_light()+
              theme(legend.position="bottom") +
              scale_colour_discrete("Spectrum") +
-             scale_x_reverse("Wavelength (nm)") +
+             scale_x_reverse("Wavelength (nm)", breaks=seq(0, 4000, 250)) +
              scale_y_continuous("Intensity") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y)
              
@@ -199,16 +199,37 @@ shinyServer(function(input, output, session) {
              geom_line() +
              theme_light()+
              theme(legend.position="bottom") +
-             scale_x_reverse("Wavelength (nm)") +
+             scale_x_reverse("Wavelength (nm)", breaks=seq(0, 4000, 250)) +
              scale_y_continuous("Intensity") +
+             coord_cartesian(xlim = ranges$x, ylim = ranges$y)
+             
+             normal.invert <- ggplot(data, aes(Wavelength, Intensity, colour=Spectrum)) +
+             geom_line() +
+             theme_light()+
+             theme(legend.position="bottom") +
+             scale_colour_discrete("Spectrum") +
+             scale_x_reverse("Wavelength (nm)", breaks=seq(0, 4000, 250)) +
+             scale_y_reverse("Intensity") +
+             coord_cartesian(xlim = ranges$x, ylim = ranges$y)
+             
+             combine.invert <- ggplot(data, aes(Wavelength, Intensity)) +
+             geom_line() +
+             theme_light()+
+             theme(legend.position="bottom") +
+             scale_x_reverse("Wavelength (nm)", breaks=seq(0, 4000, 250)) +
+             scale_y_reverse("Intensity") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y)
              
 
              
-             if(input$combine==FALSE){
+             if(input$combine==FALSE && input$invert==FALSE){
                  normal
-             } else if(input$combine==TRUE){
+             } else if(input$combine==TRUE && input$invert==FALSE){
                  combine
+             } else if(input$combine==FALSE && input$invert==TRUE){
+                 normal.invert
+             } else if(input$combine==TRUE && input$invert==TRUE){
+                 combine.invert
              }
              
 
