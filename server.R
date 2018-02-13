@@ -176,14 +176,31 @@ shinyServer(function(input, output, session) {
             
             data <- dataManipulate()
             
-            as.vector(peakpick(matrix(data[,3], ncol=1), input$spikesensitivity, peak.npos=input$spikeheight)[,1])
+            
+            
+            
+            
+            if(input$showpeaks==TRUE){
+                as.vector(peakpick(matrix(data[,3], ncol=1), neighlim=input$spikesensitivity, peak.min.sd=input$spikeheight)[,1])
+            } else if(input$showpeaks==FALSE){
+                NULL
+            }
             
         })
         
         
         peakTable <- reactive({
             
-            dataManipulate()[findPeaks(),]
+            data <- dataManipulate()
+            data$findpeaks <- findPeaks()
+            
+            if(input$showpeaks==FALSE){
+                data.frame(Spectrum=c("test"), Wavelength=c(-200), Intensity=c(0))
+            } else if(input$showpeaks==TRUE){
+                newdata <- subset(data, data$Intensity > input$spikeheight)
+                newdata[newdata$findpeaks, ]
+            }
+            
             
         })
         
@@ -192,10 +209,40 @@ shinyServer(function(input, output, session) {
             peakTable()
             
         })
-
-
-        observeEvent(input$actionplot, {
         
+        
+        output$downloadPeakTable <- downloadHandler(
+        filename = function() { paste("FTIR Results", ".csv") },
+        content = function(file
+        ) {
+            write.csv(peakTable(), file)
+        }
+        )
+        
+        intensityDescriptive <- reactive({
+            
+            min <- min(dataManipulate()[,3])
+            max <- max(dataManipulate()[,3])
+            mean <- mean(dataManipulate()[,3])
+            
+            
+                c(min, max, mean)
+
+        })
+        
+        output$uispikeheight <- renderUI({
+            
+            if(input$showpeaks==FALSE){
+                sliderInput('spikeheight', "Spike Height", min=0, max=1, value=.1)
+            }else if(input$showpeaks==TRUE){
+                sliderInput('spikeheight', "Spike Height", min=intensityDescriptive()[1], max=intensityDescriptive()[2], value=intensityDescriptive()[3])
+
+            }
+            
+        })
+        
+
+
     
         ranges <- reactiveValues(x = NULL, y = NULL)
         
@@ -212,7 +259,7 @@ shinyServer(function(input, output, session) {
              theme_light()+
              theme(legend.position="bottom") +
              scale_colour_discrete("Spectrum") +
-             scale_x_reverse("Wavelength (nm)", breaks=seq(0, 4000, 250)) +
+             scale_x_reverse("Wavelength (nm)", limits=c(max(data[,2]), min(data[,2])), breaks=seq(0, 4000, 250)) +
              scale_y_continuous("Intensity") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
              geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3)
@@ -329,7 +376,6 @@ shinyServer(function(input, output, session) {
          
          
 
- })
  })
 
 

@@ -28,8 +28,9 @@ textInput('projectname', label = "Project Name", value="myFTIR"),
 tags$hr(),
 
 actionButton('actionprocess', label = "Process Data"),
-actionButton('actionplot', label = "Plot Spectrum"),
 downloadButton('downloadPlot', "Plot"),
+downloadButton('downloadPeakTable', "Table"),
+
 
 
 
@@ -45,9 +46,9 @@ tooltip = tooltipOptions(title = "Click for manual options")
 
 dropdownButton(
 tags$h3("Analytics"), icon = icon("code"),
-checkboxInput('peaks', "Show Peaks", value=FALSE),
+checkboxInput('showpeaks', "Show Peaks", value=FALSE),
 sliderInput('spikesensitivity', "Spike Sensitivity", min=0.1, max=100, value=20),
-sliderInput('spikeheight', "Spike Height", min=0.1, max=100, value=20),
+uiOutput('uispikeheight'),
 tooltip = tooltipOptions(title = "Click for analytics")
 ),
 
