@@ -1,0 +1,10 @@
+name: cloudFTIR
+title:
+username:
+account: bleedrake
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 280658
+bundleId: 1221425
+url: https://bleedrake.shinyapps.io/cloudFTIR/
+when: 1518548211.48933

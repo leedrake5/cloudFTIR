@@ -1,6 +1,6 @@
-list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "broom", "shinyjs", "gridExtra", "dtplyr", "formattable", "XML", "corrplot", "scales", "rmarkdown", "markdown", "peakPick", "shinyWidgets")
+list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "broom", "shinyjs", "gridExtra", "dtplyr", "formattable", "XML", "corrplot", "scales", "rmarkdown", "markdown", "peakPick", "shinyWidgets", "soil.spec")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-if(length(new.packages)) install.packages(new.packages)
+#if(length(new.packages)) install.packages(new.packages)
 
 
 
@@ -11,9 +11,14 @@ library(reshape2)
 library(dplyr)
 library(DT)
 library(XML)
+library(soil.spec)
+library(parallel)
 
-
-
+my.cores <- if(parallel::detectCores()>=3){
+                paste0(parallel::detectCores()-2)
+            } else if(parallel::detectCores()<=2){
+                "1"
+            }
 
 options(digits=4)
 options(warn=-1)
@@ -125,6 +130,24 @@ readCSVData <- function(filepath, filename){
     Spectrum=rep(filename, length(file[,1])),
     Wavelength=file[,1],
     Intensity=file[,2]
+    )
+    
+    return(file.frame)
+    
+}
+
+readOpusData <- function(filepath, filename){
+    
+    filename <- gsub(".0", "", filename)
+    
+    alldata <- soil.spec::read.opus(file=filepath)
+    
+    thedata <- t(slot(slot(alldata, "data"), "ab"))
+    
+    file.frame <- data.frame(
+    Spectrum=rep(filename, length(thedata[,1])-1),
+    Wavelength=as.numeric(as.vector(substring(rownames(thedata), 2)[2:length(thedata[,1])])),
+    Intensity=as.numeric(as.vector(thedata[,1][2:length(thedata[,1])]))
     )
     
     return(file.frame)
@@ -348,6 +371,79 @@ merge_Sum <- function(.df1, .df2, .id_Columns, .match_Columns){
         }
     }
     return(merged_df1)
+}
+
+pblapply <- function (X, FUN, ..., cl = my.cores)
+{
+    FUN <- match.fun(FUN)
+    if (!is.vector(X) || is.object(X))
+    X <- as.list(X)
+    if (!is.null(cl)) {
+        if (.Platform$OS.type == "windows") {
+            if (!inherits(cl, "cluster"))
+            cl <- NULL
+        }
+        else {
+            if (inherits(cl, "cluster")) {
+                if (length(cl) < 2L)
+                cl <- NULL
+            }
+            else {
+                if (cl < 2)
+                cl <- NULL
+            }
+        }
+    }
+    nout <- as.integer(getOption("pboptions")$nout)
+    if (is.null(cl)) {
+        if (!dopb())
+        return(lapply(X, FUN, ...))
+        Split <- splitpb(length(X), 1L, nout = nout)
+        B <- length(Split)
+        pb <- startpb(0, B)
+        on.exit(closepb(pb), add = TRUE)
+        rval <- vector("list", B)
+        for (i in seq_len(B)) {
+            rval[i] <- list(lapply(X[Split[[i]]], FUN, ...))
+            setpb(pb, i)
+        }
+    }
+    else {
+        if (inherits(cl, "cluster")) {
+            PAR_FUN <- if (isTRUE(getOption("pboptions")$use_lb))
+            parallel::parLapplyLB
+            else parallel::parLapply
+            if (!dopb())
+            return(PAR_FUN(my.cores, X, FUN, ...))
+            Split <- splitpb(length(X), length(my.cores), nout = nout)
+            B <- length(Split)
+            pb <- startpb(0, B)
+            on.exit(closepb(pb), add = TRUE)
+            rval <- vector("list", B)
+            for (i in seq_len(B)) {
+                rval[i] <- list(PAR_FUN(cl, X[Split[[i]]], FUN,
+                ...))
+                setpb(pb, i)
+            }
+        }
+        else {
+            if (!dopb())
+            return(parallel::mclapply(X, FUN, ..., mc.cores = as.integer(my.cores)))
+            Split <- splitpb(length(X), as.integer(my.cores), nout = nout)
+            B <- length(Split)
+            pb <- startpb(0, B)
+            on.exit(closepb(pb), add = TRUE)
+            rval <- vector("list", B)
+            for (i in seq_len(B)) {
+                rval[i] <- list(parallel::mclapply(X[Split[[i]]],
+                FUN, ..., mc.cores = as.integer(my.cores)))
+                setpb(pb, i)
+            }
+        }
+    }
+    rval <- do.call(c, rval, quote = TRUE)
+    names(rval) <- names(X)
+    rval
 }
 
 

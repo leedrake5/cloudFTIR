@@ -18,6 +18,8 @@ library(corrplot)
 library(scales)
 library(TTR)
 library(peakPick)
+library(soil.spec)
+library(parallel)
 
 shinyServer(function(input, output, session) {
     
@@ -29,10 +31,14 @@ shinyServer(function(input, output, session) {
         } else if(input$filetype=="DPT") {
             fileInput('file1', 'Choose DPT', multiple=TRUE,
             accept=c(".dpt"))
+        } else if(input$filetype=="Opus") {
+            fileInput('file1', 'Choose Opus File', multiple=TRUE,
+            accept=NULL)
         }
         
     })
     
+
     
     output$gainshiftui <- renderUI({
         
@@ -65,7 +71,7 @@ shinyServer(function(input, output, session) {
             n <- length(inFile$datapath)
             names <- inFile$name
             
-            myfiles.frame <- as.data.frame(do.call(rbind, lapply(seq(1, n, 1), function(x) readDPTData(filepath=inFile$datapath[x], filename=inFile$name[x]))))
+            myfiles.frame <- as.data.frame(do.call(rbind, pblapply(seq(1, n, 1), function(x) readDPTData(filepath=inFile$datapath[x], filename=inFile$name[x]))))
         
         myfiles.frame$Wavelength <- myfiles.frame$Wavelength + gainshiftHold()
         
@@ -82,12 +88,30 @@ shinyServer(function(input, output, session) {
             n <- length(inFile$datapath)
             names <- inFile$name
             
-            myfiles.frame <- as.data.frame(do.call(rbind, lapply(seq(1, n, 1), function(x) readCSVData(filepath=inFile$datapath[x], filename=inFile$name[x]))))
+            myfiles.frame <- as.data.frame(do.call(rbind, pblapply(seq(1, n, 1), function(x) readCSVData(filepath=inFile$datapath[x], filename=inFile$name[x]))))
             
         myfiles.frame$Wavelength <- myfiles.frame$Wavelength + gainshiftHold()
         
         myfiles.frame
      
+    })
+    
+    
+    readOpus <- reactive({
+        
+        inFile <- input$file1
+        if (is.null(inFile)) return(NULL)
+        
+        n <- length(inFile$datapath)
+        names <- inFile$name
+        
+        myfiles.frame <- as.data.frame(do.call(rbind, pblapply(seq(1, n, 1), function(x) readOpusData(filepath=inFile$datapath[x], filename=inFile$name[x]))))
+        
+        myfiles.frame$Wavelength <- myfiles.frame$Wavelength + gainshiftHold()
+        
+        myfiles.frame
+        
+        
     })
     
     
@@ -100,6 +124,8 @@ shinyServer(function(input, output, session) {
                 readDPT()
             } else if(input$filetype=="CSV"){
                 readCSV()
+            } else if(input$filetype=="Opus"){
+                readOpus()
             }
             
                 data
@@ -115,6 +141,7 @@ shinyServer(function(input, output, session) {
             data$Spectrum <- gsub(".dpt", "", data$Spectrum)
             data$Spectrum <- gsub(".csv", "", data$Spectrum)
             data$Spectrum <- gsub(".CSV", "", data$Spectrum)
+            data$Spectrum <- gsub(".0", "", data$Spectrum)
 
             data
     
@@ -373,6 +400,221 @@ shinyServer(function(input, output, session) {
         )
         
          })
+    
+    
+    
+    
+    
+    hotableInputBlank <- reactive({
+        
+        #elements <- elementallinestouse()
+        
+        
+        
+        
+        spectra.line.table <- if(input$filetype=="Spectra"){
+            spectraData()
+        } else if(input$filetype=="Elio"){
+            spectraData()
+        }  else if(input$filetype=="MCA"){
+            spectraData()
+        }  else if(input$filetype=="SPX"){
+            spectraData()
+        }  else if(input$filetype=="PDZ"){
+            spectraData()
+        } else if(input$filetype=="Net"){
+            dataHold()
+        }
+        
+        empty.line.table <- spectra.line.table[,elements] * 0.0000
+        
+        #empty.line.table$Spectrum <- spectra.line.table$Spectrum
+        
+        hold.frame <- data.frame(spectra.line.table$Spectrum, empty.line.table)
+        colnames(hold.frame) <- c("Spectrum", elements)
+        
+        hold.frame <- as.data.frame(hold.frame)
+        
+        
+        
+        hold.frame
+        
+        
+    })
+    
+    hotableInputCal <- reactive({
+        
+        #elements <- elementallinestouse()
+        
+        
+        
+        
+        spectra.line.table <- dataManipulate()
+        
+        
+        
+        
+        
+        empty.line.table <- spectra.line.table[,elements] * 0.0000
+        
+        #empty.line.table$Spectrum <- spectra.line.table$Spectrum
+        
+        hold.frame <- data.frame(spectra.line.table$Spectrum, empty.line.table)
+        colnames(hold.frame) <- c("Spectrum", elements)
+        
+        hold.frame <- as.data.frame(hold.frame)
+        
+        
+        value.frame <- calFileContents()$Values
+        
+        #anna <- rbind(hold.frame, value.frame)
+        
+        #temp.table <- data.table(anna)[,list(result = sum(result)), elements]
+        
+        #as.data.frame(temp.table)
+        
+        #element.matches <- elements[elements %in% ls(value.frame)]
+        
+        #merge_Sum(.df1=hold.frame, .df2=value.frame, .id_Columns="Spectrum",  .match_Columns=element.matches)
+        
+        
+        #data.frame(calFileContents()$Values, hold.frame[,! names(hold.frame) %in% names(calFileContents()$Values)])
+        
+        hold.frame.reduced <- hold.frame[2:length(hold.frame)]
+        value.frame.reduced <- if(colnames(calFileContents()$Values)[1]=="Spectrum"){
+            value.frame[2:length(value.frame)]
+        }else if(colnames(calFileContents()$Values)[1]=="Include"){
+            value.frame[3:length(value.frame)]
+        }
+        
+        rownames(hold.frame.reduced) <- hold.frame$Spectrum
+        rownames(value.frame.reduced) <- value.frame$Spectrum
+        
+        
+        hotable.new = hold.frame.reduced %>% add_rownames %>%
+        full_join(value.frame.reduced %>% add_rownames) %>%
+        group_by(rowname) %>%
+        summarise_all(funs(sum(., na.rm = FALSE)))
+        
+        colnames(hotable.new)[1] <- "Spectrum"
+        
+        hotable.new$Spectrum <- gsub(".pdz", "", hotable.new$Spectrum)
+        hotable.new$Spectrum <- gsub(".csv", "", hotable.new$Spectrum)
+        hotable.new$Spectrum <- gsub(".CSV", "", hotable.new$Spectrum)
+        hotable.new$Spectrum <- gsub(".spt", "", hotable.new$Spectrum)
+        hotable.new$Spectrum <- gsub(".mca", "", hotable.new$Spectrum)
+        hotable.new$Spectrum <- gsub(".spx", "", hotable.new$Spectrum)
+        
+        hotable.new
+        
+        
+    })
+    
+    hotableInput <- reactive({
+        
+        
+        hotable.data <- if(input$usecalfile==FALSE){
+            hotableInputBlank()
+        }else if(input$usecalfile==TRUE){
+            hotableInputCal()
+        }
+        
+        
+        
+        hotable.new <- if(input$usecalfile==FALSE){
+            data.frame(Include=rep(TRUE, length(hotable.data$Spectrum)), hotable.data)
+        }else if(input$usecalfile==TRUE && colnames(calFileContents()$Values)[1]=="Spectrum"){
+            data.frame(Include=rep(TRUE, length(hotable.data$Spectrum)), hotable.data)
+        }else if(input$usecalfile==TRUE && colnames(calFileContents()$Values)[1]=="Include"){
+            data.frame(Include=calFileContents()$Values[,1], hotable.data)
+        }
+        
+        
+        
+    })
+    
+    
+    
+    
+    
+    values <- reactiveValues()
+    
+    
+    
+    
+    
+    #observe({
+    #    if (!is.null(input$hot)) {
+    #        DF <- hot_to_r(input$hot)
+    #    } else {
+    #        if (input$linecommit)
+    #        DF <- hotableInput()
+    #        else
+    #        DF <- values[["DF"]]
+    #    }
+    #    values[["DF"]] <- DF
+    #})
+    
+    eventReactive(input$linecommit,{
+        
+        values[["DF"]] <- hotableInput()
+        
+    })
+    
+    
+    ## Handsontable
+    
+    output$hot <- renderRHandsontable({
+        
+        DF <- values[["DF"]]
+        
+        DF <- DF[order(as.character(DF$Spectrum)),]
+        
+        
+        
+        if (!is.null(DF))
+        rhandsontable(DF) %>% hot_col(2:length(DF), renderer=htmlwidgets::JS("safeHtmlRenderer"))
+        
+        
+    })
+    
+    
+    observeEvent(input$resethotable, {
+        
+        values[["DF"]] <- NULL
+        
+        values[["DF"]] <- hotableInput()
+        
+        
+    })
+    
+    output$covarianceplotvalues <- renderPlot({
+        
+        data.table <- values[["DF"]]
+        correlations <- cor(data.table[,3:length(data.table)], use="pairwise.complete.obs")
+        corrplot(correlations, method="circle")
+        
+    })
+    
+    # randomInterList <- reactive({
+    #   if (is.null(input$intercept_vars))
+    #   paste(,2)
+    #   else
+    #   input$intercept_vars
+    #})
+    
+    
+    #randomSlopeList <- reactive({
+    #   if (is.null(input$intercept_vars))
+    #   paste(,2)
+    #   else
+    #   input$slope_vars
+    #})
+    
+    #output$nullintercept <- randomInterList()
+    
+    #output$nullslope <- randomSlopeList()
+
          
          
 

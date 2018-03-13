@@ -60,7 +60,7 @@ tags$hr(),
 
 uiOutput('filegrab'),
 
-selectInput('filetype', label="Filetype", c("DPT", "CSV"), selected="DPT")
+selectInput('filetype', label="Filetype", c("DPT", "CSV", "Opus"), selected="DPT")
 ),
 
 
@@ -79,6 +79,33 @@ uiOutput('hover_info_spectrum'))
 tabPanel("Table", dataTableOutput('peaktable'))
 ))
 )
+)),
+
+
+tabPanel("Add Concentrations",
+div(class="outer",
+
+fluidRow(
+sidebarLayout(
+sidebarPanel(
+
+actionButton('resethotable', "Reset"),
+actionButton('hotableprocess2', "Enter Values"),
+tags$hr(),
+textInput("calunits", label = "Units", value="Weight %")
+
+
+),
+
+
+mainPanel(
+tabsetPanel(
+id = 'dataset',
+tabPanel('Enter Concentrations', rHandsontableOutput('hot')),
+tabPanel('Covariance', plotOutput('covarianceplotvalues'))
+
+))
+))
 ))
 
 ))
