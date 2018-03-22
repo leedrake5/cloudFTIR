@@ -268,6 +268,38 @@ shinyServer(function(input, output, session) {
             
         })
         
+        
+        
+        peakID <- reactive({
+            
+            pritable[pritable.range.index, ]$Min <- pritable[pritable.range.index, ]$Mid-input$wavethreshold
+            pritable[pritable.range.index, ]$Max <- pritable[pritable.range.index, ]$Mid+input$wavethreshold
+            
+            table.list <- pblapply(peakTable()$Wavelength, function(x) in_range(peak=x, pritable=pritable))
+            
+            do.call(rbind, table.list)
+
+            
+        })
+        
+        
+        output$peaktableid <- renderDataTable({
+            
+            peakID()
+            
+        })
+        
+        
+        output$downloadPeakTableID <- downloadHandler(
+        filename = function() { paste("FTIR Results", ".csv") },
+        content = function(file
+        ) {
+            write.csv(peakID(), file)
+        }
+        )
+        
+        
+        
 
 
     
@@ -403,46 +435,36 @@ shinyServer(function(input, output, session) {
     
     
     
-    
-    
-    hotableInputBlank <- reactive({
+    waveInput <- reactive({
         
-        #elements <- elementallinestouse()
+        blank.frame <- data.frame(
+        Name=rep("", 25),
+        WaveMin=rep("", 25),
+        WaveMax=rep("", 25)
+        )
         
+        blank.frame$Name <- as.character(blank.frame$Name)
+        blank.frame$WaveMin <- as.numeric(blank.frame$WaveMin)
+        blank.frame$WaveMax <- as.numeric(blank.frame$WaveMax)
         
-        
-        
-        spectra.line.table <- if(input$filetype=="Spectra"){
-            spectraData()
-        } else if(input$filetype=="Elio"){
-            spectraData()
-        }  else if(input$filetype=="MCA"){
-            spectraData()
-        }  else if(input$filetype=="SPX"){
-            spectraData()
-        }  else if(input$filetype=="PDZ"){
-            spectraData()
-        } else if(input$filetype=="Net"){
-            dataHold()
-        }
-        
-        empty.line.table <- spectra.line.table[,elements] * 0.0000
-        
-        #empty.line.table$Spectrum <- spectra.line.table$Spectrum
-        
-        hold.frame <- data.frame(spectra.line.table$Spectrum, empty.line.table)
-        colnames(hold.frame) <- c("Spectrum", elements)
-        
-        hold.frame <- as.data.frame(hold.frame)
-        
-        
-        
-        hold.frame
-        
+        blank.frame
+
         
     })
     
-    hotableInputCal <- reactive({
+    
+    
+    wavevalues <- reactiveValues()
+    
+    
+    
+    
+
+    
+    
+
+    
+    waveInputCal <- reactive({
         
         #elements <- elementallinestouse()
         
@@ -452,17 +474,7 @@ shinyServer(function(input, output, session) {
         spectra.line.table <- dataManipulate()
         
         
-        
-        
-        
-        empty.line.table <- spectra.line.table[,elements] * 0.0000
-        
-        #empty.line.table$Spectrum <- spectra.line.table$Spectrum
-        
-        hold.frame <- data.frame(spectra.line.table$Spectrum, empty.line.table)
-        colnames(hold.frame) <- c("Spectrum", elements)
-        
-        hold.frame <- as.data.frame(hold.frame)
+        hold.frame <- waveInput()
         
         
         value.frame <- calFileContents()$Values
@@ -510,25 +522,16 @@ shinyServer(function(input, output, session) {
         
     })
     
-    hotableInput <- reactive({
+    waveTableInput <- reactive({
         
         
-        hotable.data <- if(input$usecalfile==FALSE){
-            hotableInputBlank()
-        }else if(input$usecalfile==TRUE){
-            hotableInputCal()
-        }
+        #if(input$usecalfile==FALSE){
+        #    waveInput()
+        #}else if(input$usecalfile==TRUE){
+        #    waveInputCal()
+        #}
         
-        
-        
-        hotable.new <- if(input$usecalfile==FALSE){
-            data.frame(Include=rep(TRUE, length(hotable.data$Spectrum)), hotable.data)
-        }else if(input$usecalfile==TRUE && colnames(calFileContents()$Values)[1]=="Spectrum"){
-            data.frame(Include=rep(TRUE, length(hotable.data$Spectrum)), hotable.data)
-        }else if(input$usecalfile==TRUE && colnames(calFileContents()$Values)[1]=="Include"){
-            data.frame(Include=calFileContents()$Values[,1], hotable.data)
-        }
-        
+        waveInput()
         
         
     })
@@ -537,38 +540,40 @@ shinyServer(function(input, output, session) {
     
     
     
-    values <- reactiveValues()
     
     
     
     
     
-    #observe({
-    #    if (!is.null(input$hot)) {
-    #        DF <- hot_to_r(input$hot)
-    #    } else {
-    #        if (input$linecommit)
-    #        DF <- hotableInput()
-    #        else
-    #        DF <- values[["DF"]]
-    #    }
-    #    values[["DF"]] <- DF
-    #})
+    observe({
+        if (!is.null(input$hotwave)) {
+            DF <- hot_to_r(input$hotwave)
+        } else {
+            if (input$linecommitwave)
+            DF <- waveTableInput()
+            else
+            DF <- wavevalues[["DF"]]
+        }
+        wavevalues[["DF"]] <- DF
+    })
     
-    eventReactive(input$linecommit,{
+    eventReactive(input$linecommitwave,{
         
-        values[["DF"]] <- hotableInput()
+        wavevalues[["DF"]] <- waveTableInput()
         
     })
+    
+    
+
     
     
     ## Handsontable
     
-    output$hot <- renderRHandsontable({
+    output$hotwave <- renderRHandsontable({
         
-        DF <- values[["DF"]]
+        DF <- wavevalues[["DF"]]
         
-        DF <- DF[order(as.character(DF$Spectrum)),]
+        DF <- DF[order(as.character(DF$Name)),]
         
         
         
@@ -579,18 +584,18 @@ shinyServer(function(input, output, session) {
     })
     
     
-    observeEvent(input$resethotable, {
+    observeEvent(input$resethotablewave, {
         
-        values[["DF"]] <- NULL
+        wavevalues[["DF"]] <- NULL
         
-        values[["DF"]] <- hotableInput()
+        wavevalues[["DF"]] <- waveTableInput()
         
         
     })
     
-    output$covarianceplotvalues <- renderPlot({
+    output$covarianceplotvalueswave <- renderPlot({
         
-        data.table <- values[["DF"]]
+        data.table <- wavevalues[["DF"]]
         correlations <- cor(data.table[,3:length(data.table)], use="pairwise.complete.obs")
         corrplot(correlations, method="circle")
         

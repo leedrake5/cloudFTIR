@@ -30,6 +30,7 @@ tags$hr(),
 actionButton('actionprocess', label = "Process Data"),
 downloadButton('downloadPlot', "Plot"),
 downloadButton('downloadPeakTable', "Table"),
+downloadButton('downloadPeakTableID', "Table"),
 
 
 
@@ -49,6 +50,7 @@ tags$h3("Analytics"), icon = icon("code"),
 checkboxInput('showpeaks', "Show Peaks", value=FALSE),
 sliderInput('spikesensitivity', "Spike Sensitivity", min=0.1, max=100, value=20),
 uiOutput('uispikeheight'),
+sliderInput('wavethreshold', "Wave SD", min=0, max=20, value=10),
 tooltip = tooltipOptions(title = "Click for analytics")
 ),
 
@@ -76,11 +78,37 @@ brush = brushOpts(id = 'plot1_brush', resetOnNew = TRUE),
 hover = hoverOpts('plot_hover_spectrum', delay = 100, delayType = "debounce")),
 uiOutput('hover_info_spectrum'))
 ),
-tabPanel("Table", dataTableOutput('peaktable'))
+tabPanel("Table", dataTableOutput('peaktable')),
+tabPanel("Peak ID", dataTableOutput('peaktableid'))
+
 ))
 )
 )),
 
+
+
+tabPanel("Add Wavenumbers",
+div(class="outer",
+
+fluidRow(
+sidebarLayout(
+sidebarPanel(
+
+actionButton('resethotablewave', "Reset"),
+actionButton('linecommitwave', "Add Wavenumbers")
+
+
+
+),
+
+
+mainPanel(
+tabsetPanel(
+tabPanel('Enter Concentrations', rHandsontableOutput('hotwave')),
+tabPanel('Covariance', plotOutput('covarianceplotvalueswave'))
+))
+))
+)),
 
 tabPanel("Add Concentrations",
 div(class="outer",

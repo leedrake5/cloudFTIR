@@ -1188,6 +1188,25 @@ lucas.comp.prep.net <- function(data, spectra.line.table, element.line, slope.el
 }
 
 
+in_range <- function(peak, pritable){
+    
+    temp <- pritable[(pritable$Max>=peak & pritable$Min<=peak),]
+    temp[complete.cases(temp),]
+    
+}
+
+
+
+####Data
+pritable <- read.csv(file="data/FTIR Master Table - Sheet1.csv")
+
+pritable.range.index <- as.vector(is.na(pritable$Max))
+
+
+
+
+
+
 
 
 
