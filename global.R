@@ -1192,7 +1192,7 @@ lucas.comp.prep.net <- function(data, spectra.line.table, element.line, slope.el
 in_range <- function(spectrum, peak, pritable){
     
     temp <- pritable[(pritable$Max>=peak & pritable$Min<=peak),]
-    temp <- temp[complete.cases(temp),]
+    temp <- temp[complete.cases(temp[,c("id", "Peak.Range", "Wavelengths", "Max", "Min", "Type", "General")]),]
     temp$Spectrum <- rep(spectrum, length(temp[,1]))
     temp$Peak <- rep(peak, length(temp[,1]))
     

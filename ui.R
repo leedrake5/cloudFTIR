@@ -42,7 +42,8 @@ tags$hr(),
 #actionButton('actionprocess', label = "Process Data"),
 downloadButton('downloadPlot', "Plot"),
 downloadButton('downloadPeakTable', "Table"),
-downloadButton('downloadPeakTableID', "Table"),
+downloadButton('downloadPeakTableID', "ID"),
+downloadButton('downloadPeakTableSummary', "Summary"),
 
 
 
@@ -95,7 +96,8 @@ hover = hoverOpts('plot_hover_spectrum', delay = 100, delayType = "debounce")),
 uiOutput('hover_info_spectrum'))
 ),
 tabPanel("Table", dataTableOutput('peaktable')),
-tabPanel("Peak ID", dataTableOutput('peaktableid'))
+tabPanel("Peak ID", dataTableOutput('peaktableid')),
+tabPanel("Summary", dataTableOutput('peaktablesummary'))
 
 ))
 )

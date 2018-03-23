@@ -3,6 +3,7 @@ library(ggplot2)
 library(pbapply)
 library(reshape2)
 library(dplyr)
+library(plyr)
 library(data.table)
 library(DT)
 library(gridExtra)
@@ -309,7 +310,46 @@ shinyServer(function(input, output, session) {
         )
         
         
+        summaryTable <- reactive({
+            
+            index <- as.vector(unique(peakID()$Spectrum))
+            
+            table.list <- lapply(index, function(x) subset(peakID(), peakID()$Spectrum==x))
+            names(table.list) <- index
+
+
+            n <- seq(from=1, to=length(table.list), by=1)
+
+            
+            table.tables <- lapply(n, function(x) table(table.list[[x]]$General))
+            table.tables <- lapply(table.tables, as.data.frame)
+            
+            for(i in 1:length(index)){
+                colnames(table.tables[[i]]) <- c("General", index[i])
+            }
+            
+            #names(table.tables) <- index
+
+            do.call(cbind, table.tables)[,c("General", index)]
+            
+        })
         
+        
+        
+        output$peaktablesummary <- renderDataTable({
+            
+            summaryTable()
+            
+        })
+        
+        
+        output$downloadPeakTableSummary <- downloadHandler(
+        filename = function() { paste("Summary Results", ".csv") },
+        content = function(file
+        ) {
+            write.csv(summaryTable(), file)
+        }
+        )
 
 
     
