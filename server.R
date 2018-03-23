@@ -287,7 +287,7 @@ shinyServer(function(input, output, session) {
             
             data <- do.call(rbind, table.list)
             
-            data[,c("Spectrum", "General", "Type", "Max", "Mid", "Min")]
+            data[,c("Spectrum", "General", "Type", "Peak", "Max", "Mid", "Min")]
 
             
         })

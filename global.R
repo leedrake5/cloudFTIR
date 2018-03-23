@@ -1194,6 +1194,7 @@ in_range <- function(spectrum, peak, pritable){
     temp <- pritable[(pritable$Max>=peak & pritable$Min<=peak),]
     temp <- temp[complete.cases(temp),]
     temp$Spectrum <- rep(spectrum, length(temp[,1]))
+    temp$Peak <- rep(peak, length(temp[,1]))
     
     temp
     
