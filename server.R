@@ -391,8 +391,10 @@ shinyServer(function(input, output, session) {
             
             ggplot(datamelt, aes(General, value)) +
             geom_bar(stat = "identity", aes(fill = General), position = "dodge") +
+            scale_y_continuous("Counts") +
             facet_grid(variable~.) +
             theme_light() +
+            theme(strip.text.y = element_text(size=15)) +
             theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
             theme(axis.text.x = element_text(size=15)) +
             theme(axis.text.y = element_text(size=15)) +
