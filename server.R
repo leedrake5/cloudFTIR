@@ -362,8 +362,12 @@ shinyServer(function(input, output, session) {
             
             #names(table.tables) <- index
 
-            frame <- do.call(cbind, table.tables)[,c("General", index)]
-            frame[ rowSums(frame[,-1])!=0, ]
+            if(length(table.tables)>1){
+                frame <- do.call(cbind, table.tables)[,c("General", index)]
+                frame[ rowSums(frame[,-1])!=0, ]
+            } else if(length(table.tables)==1) {
+                table.tables[[1]][table.tables[[1]][,2]!=0, ]
+            }
             
         })
         
