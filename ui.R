@@ -8,6 +8,11 @@ library(rhandsontable)
 library(Cairo)
 library(shinyWidgets)
 
+options(warn=-1)
+assign("last.warning", NULL, envir = baseenv())
+
+
+
 
 ui=list(
 tagList(
@@ -16,18 +21,25 @@ header=tags$head(tags$style(".table .alignRight {color: black; text-align:right;
 
 shinyUI(navbarPage("cloudFTIR", id="nav", theme = shinytheme("flatly"),
 
+
+
 tabPanel("Spectrum",
 div(class="outer",
 headerPanel("FTIR Spectrum Viewer"),
 sidebarLayout(
 sidebarPanel(
 
+tags$style(type="text/css",
+".shiny-output-error { visibility: hidden; }",
+".shiny-output-error:before { visibility: hidden; }"
+),
+
 
 textInput('projectname', label = "Project Name", value="myFTIR"),
 
 tags$hr(),
 
-actionButton('actionprocess', label = "Process Data"),
+#actionButton('actionprocess', label = "Process Data"),
 downloadButton('downloadPlot', "Plot"),
 downloadButton('downloadPeakTable', "Table"),
 downloadButton('downloadPeakTableID', "Table"),
@@ -45,14 +57,13 @@ checkboxInput('invert', "Invert", value=FALSE),
 tooltip = tooltipOptions(title = "Click for manual options")
 ),
 
-dropdownButton(
-tags$h3("Analytics"), icon = icon("code"),
-checkboxInput('showpeaks', "Show Peaks", value=FALSE),
+checkboxInput('showpeaks', "Show Peaks", value=TRUE),
+
+
 sliderInput('spikesensitivity', "Spike Sensitivity", min=0.1, max=100, value=20),
 uiOutput('uispikeheight'),
-sliderInput('wavethreshold', "Wave SD", min=0, max=20, value=10),
-tooltip = tooltipOptions(title = "Click for analytics")
-),
+sliderInput('wavethreshold', "Wave SD", min=0, max=20, value=3),
+
 
 
 
@@ -67,6 +78,11 @@ selectInput('filetype', label="Filetype", c("DPT", "CSV", "Opus"), selected="DPT
 
 
 mainPanel(
+
+tags$style(type="text/css",
+".shiny-output-error { visibility: hidden; }",
+".shiny-output-error:before { visibility: hidden; }"
+),
 tabsetPanel(
 tabPanel("Plot",
 

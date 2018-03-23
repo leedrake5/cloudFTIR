@@ -2,7 +2,8 @@ list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2"
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 #if(length(new.packages)) install.packages(new.packages)
 
-
+options(warn=-1)
+assign("last.warning", NULL, envir = baseenv())
 
 library(shiny)
 library(ggplot2)
@@ -1188,10 +1189,13 @@ lucas.comp.prep.net <- function(data, spectra.line.table, element.line, slope.el
 }
 
 
-in_range <- function(peak, pritable){
+in_range <- function(spectrum, peak, pritable){
     
     temp <- pritable[(pritable$Max>=peak & pritable$Min<=peak),]
-    temp[complete.cases(temp),]
+    temp <- temp[complete.cases(temp),]
+    temp$Spectrum <- rep(spectrum, length(temp[,1]))
+    
+    temp
     
 }
 

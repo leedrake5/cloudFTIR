@@ -21,7 +21,13 @@ library(peakPick)
 library(soil.spec)
 library(parallel)
 
+options(warn=-1)
+assign("last.warning", NULL, envir = baseenv())
+
 shinyServer(function(input, output, session) {
+    
+    options(warn=-1)
+
     
     output$filegrab <- renderUI({
         
@@ -115,7 +121,7 @@ shinyServer(function(input, output, session) {
     })
     
     
-    observeEvent(input$actionprocess, {
+    observeEvent(!is.null(input$file1), {
         
 
         myData <- reactive({
@@ -275,9 +281,13 @@ shinyServer(function(input, output, session) {
             pritable[pritable.range.index, ]$Min <- pritable[pritable.range.index, ]$Mid-input$wavethreshold
             pritable[pritable.range.index, ]$Max <- pritable[pritable.range.index, ]$Mid+input$wavethreshold
             
-            table.list <- pblapply(peakTable()$Wavelength, function(x) in_range(peak=x, pritable=pritable))
+            n <- seq(from=1, to=length(peakTable()[,1]), by=1)
             
-            do.call(rbind, table.list)
+            table.list <- pblapply(n, function(x) in_range(spectrum=peakTable()$Spectrum[x],peak=peakTable()$Wavelength[x], pritable=pritable))
+            
+            data <- do.call(rbind, table.list)
+            
+            data[,c("Spectrum", "General", "Type", "Max", "Mid", "Min")]
 
             
         })
