@@ -330,7 +330,8 @@ shinyServer(function(input, output, session) {
             
             #names(table.tables) <- index
 
-            do.call(cbind, table.tables)[,c("General", index)]
+            frame <- do.call(cbind, table.tables)[,c("General", index)]
+            frame[ rowSums(frame[,-1])!=0, ]
             
         })
         
@@ -350,6 +351,35 @@ shinyServer(function(input, output, session) {
             write.csv(summaryTable(), file)
         }
         )
+        
+        
+        summaryPlot <- reactive({
+            
+            datamelt <- melt(summaryTable(), id="General")
+            
+            ggplot(datamelt, aes(General, value)) +
+            geom_bar(stat = "identity", aes(fill = General), position = "dodge") +
+            facet_grid(variable~.) +
+            theme_light() +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1))
+            
+        })
+        
+        output$summaryplot <- renderPlot({
+            
+            summaryPlot()
+            
+        })
+        
+        
+        output$downloadsummaryplot <- downloadHandler(
+        filename = function() { paste("Summary Plot") },
+        content = function(file
+        ) {
+            ggsave(file,summaryPlot(), width=10, height=10)
+        }
+        )
+        
 
 
     

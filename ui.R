@@ -44,6 +44,7 @@ downloadButton('downloadPlot', "Plot"),
 downloadButton('downloadPeakTable', "Table"),
 downloadButton('downloadPeakTableID', "ID"),
 downloadButton('downloadPeakTableSummary', "Summary"),
+downloadButton('downloadsummaryplot', "Summary Plot"),
 
 
 
@@ -86,18 +87,25 @@ tags$style(type="text/css",
 ),
 tabsetPanel(
 tabPanel("Plot",
-
-div(
-style = "position:relative",
-plotOutput('distPlot', height = 685,
-dblclick = 'plot1_dblclick',
-brush = brushOpts(id = 'plot1_brush', resetOnNew = TRUE),
-hover = hoverOpts('plot_hover_spectrum', delay = 100, delayType = "debounce")),
-uiOutput('hover_info_spectrum'))
+    div(
+        style = "position:relative",
+        plotOutput('distPlot', height = 685,
+            dblclick = 'plot1_dblclick',
+            brush = brushOpts(id = 'plot1_brush', resetOnNew = TRUE),
+            hover = hoverOpts('plot_hover_spectrum', delay = 100, delayType = "debounce")),
+        uiOutput('hover_info_spectrum'))
 ),
 tabPanel("Table", dataTableOutput('peaktable')),
 tabPanel("Peak ID", dataTableOutput('peaktableid')),
-tabPanel("Summary", dataTableOutput('peaktablesummary'))
+tabPanel("Summary", dataTableOutput('peaktablesummary')),
+tabPanel("Summary Plot",
+    div(
+        style = "position:relative",
+        plotOutput('summaryplot', height = 685,
+            dblclick = 'sumplot1_dblclick',
+            brush = brushOpts(id = 'sumplot1_brush', resetOnNew = TRUE),
+        hover = hoverOpts('sumplot_hover_spectrum', delay = 100, delayType = "debounce"))
+))
 
 ))
 )
