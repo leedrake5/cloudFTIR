@@ -206,16 +206,34 @@ shinyServer(function(input, output, session) {
     
         })
         
-        findPeaks <- reactive({
+        
+        
+        dataSplit <- reactive({
             
             data <- dataManipulate()
             
+            index <- as.vector(unique(data$Spectrum))
             
+            data.list <- lapply(index, function(x) subset(data, data$Spectrum==x))
+            names(data.list) <- index
             
+            data.list
+            
+        })
+        
+        findPeaks <- reactive({
+            
+            data.list <- dataSplit()
+            
+            index <- names(data.list)
+
+
             
             
             if(input$showpeaks==TRUE){
-                as.vector(peakpick(matrix(data[,3], ncol=1), neighlim=input$spikesensitivity, peak.min.sd=input$spikeheight)[,1])
+                data <- lapply(index, function(x) as.vector(peakpick(matrix(data.list[[x]][,3], ncol=1), neighlim=input$spikesensitivity, peak.min.sd=input$spikeheight*max(data.list[[x]][,3]))[,1]))
+                names(data) <- index
+                data
             } else if(input$showpeaks==FALSE){
                 NULL
             }
@@ -225,14 +243,23 @@ shinyServer(function(input, output, session) {
         
         peakTable <- reactive({
             
-            data <- dataManipulate()
-            data$findpeaks <- findPeaks()
+            data <- dataSplit()
+            index <- names(data)
+
+            for(i in 1:length(index)){
+                data[[i]]$findpeaks <- findPeaks()[[i]]
+                    
+            }
+            
             
             if(input$showpeaks==FALSE){
                 data.frame(Spectrum=c("test"), Wavelength=c(-200), Intensity=c(0))
             } else if(input$showpeaks==TRUE){
-                newdata <- subset(data, data$Intensity > input$spikeheight)
-                newdata[newdata$findpeaks, ]
+                newdata <- lapply(names(data), function(x) subset(data[[x]], data[[x]]$Intensity > (input$spikeheight*max(data[[x]]$Intensity))))
+                names(newdata) <- names(data)
+                newdata <- lapply(names(newdata), function(x) as.data.frame(newdata[[x]][newdata[[x]]$findpeaks, ]))
+                final.data <- as.data.frame(do.call(rbind, newdata))
+                final.data
             }
             
             
@@ -265,6 +292,11 @@ shinyServer(function(input, output, session) {
         })
         
         output$uispikeheight <- renderUI({
+            
+            
+            data.list <- dataSplit()
+            
+            index <- names(data.list)
             
             if(input$showpeaks==FALSE){
                 sliderInput('spikeheight', "Spike Height", min=0, max=1, value=.1)
@@ -361,7 +393,14 @@ shinyServer(function(input, output, session) {
             geom_bar(stat = "identity", aes(fill = General), position = "dodge") +
             facet_grid(variable~.) +
             theme_light() +
-            theme(axis.text.x = element_text(angle = 90, hjust = 1))
+            theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+            theme(axis.text.x = element_text(size=15)) +
+            theme(axis.text.y = element_text(size=15)) +
+            theme(axis.title.x = element_text(size=15)) +
+            theme(axis.title.y = element_text(size=15, angle=90)) +
+            theme(plot.title=element_text(size=20)) +
+            theme(legend.title=element_text(size=15)) +
+            theme(legend.text=element_text(size=15))
             
         })
         
@@ -401,7 +440,14 @@ shinyServer(function(input, output, session) {
              scale_x_reverse("Wavelength (nm)", limits=c(max(data[,2]), min(data[,2])), breaks=seq(0, 4000, 250)) +
              scale_y_continuous("Intensity") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
-             geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3)
+             geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3) +
+             theme(axis.text.x = element_text(size=15)) +
+             theme(axis.text.y = element_text(size=15)) +
+             theme(axis.title.x = element_text(size=15)) +
+             theme(axis.title.y = element_text(size=15, angle=90)) +
+             theme(plot.title=element_text(size=20)) +
+             theme(legend.title=element_text(size=15)) +
+             theme(legend.text=element_text(size=15))
              
              combine <- ggplot(data) +
              geom_line(aes(Wavelength, Intensity)) +
@@ -410,7 +456,14 @@ shinyServer(function(input, output, session) {
              scale_x_reverse("Wavelength (nm)", breaks=seq(0, 4000, 250)) +
              scale_y_continuous("Intensity") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
-             geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3)
+             geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3) +
+             theme(axis.text.x = element_text(size=15)) +
+             theme(axis.text.y = element_text(size=15)) +
+             theme(axis.title.x = element_text(size=15)) +
+             theme(axis.title.y = element_text(size=15, angle=90)) +
+             theme(plot.title=element_text(size=20)) +
+             theme(legend.title=element_text(size=15)) +
+             theme(legend.text=element_text(size=15))
              
              normal.invert <- ggplot(data) +
              geom_line(aes(Wavelength, Intensity, colour=Spectrum)) +
@@ -420,7 +473,14 @@ shinyServer(function(input, output, session) {
              scale_x_reverse("Wavelength (nm)", breaks=seq(0, 4000, 250)) +
              scale_y_reverse("Intensity") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
-             geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3)
+             geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3) +
+             theme(axis.text.x = element_text(size=15)) +
+             theme(axis.text.y = element_text(size=15)) +
+             theme(axis.title.x = element_text(size=15)) +
+             theme(axis.title.y = element_text(size=15, angle=90)) +
+             theme(plot.title=element_text(size=20)) +
+             theme(legend.title=element_text(size=15)) +
+             theme(legend.text=element_text(size=15))
              
              combine.invert <- ggplot(data) +
              geom_line(aes(Wavelength, Intensity)) +
@@ -429,7 +489,14 @@ shinyServer(function(input, output, session) {
              scale_x_reverse("Wavelength (nm)", breaks=seq(0, 4000, 250)) +
              scale_y_reverse("Intensity") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
-             geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3)
+             geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3) +
+             theme(axis.text.x = element_text(size=15)) +
+             theme(axis.text.y = element_text(size=15)) +
+             theme(axis.title.x = element_text(size=15)) +
+             theme(axis.title.y = element_text(size=15, angle=90)) +
+             theme(plot.title=element_text(size=20)) +
+             theme(legend.title=element_text(size=15)) +
+             theme(legend.text=element_text(size=15))
              
 
              

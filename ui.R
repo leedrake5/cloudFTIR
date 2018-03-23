@@ -63,7 +63,8 @@ checkboxInput('showpeaks', "Show Peaks", value=TRUE),
 
 
 sliderInput('spikesensitivity', "Spike Sensitivity", min=0.1, max=100, value=20),
-uiOutput('uispikeheight'),
+#uiOutput('uispikeheight'),
+sliderInput('spikeheight', "Spike Height", min=0, max=1, value=.1),
 sliderInput('wavethreshold', "Wave SD", min=0, max=20, value=3),
 
 
