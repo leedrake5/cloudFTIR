@@ -325,10 +325,32 @@ shinyServer(function(input, output, session) {
             
         })
         
+        summaryID <- reactive({
+            
+            peak.table <- peakID()
+            
+            peak.table <- peak.table[,c("Spectrum", "Type", "Peak", "Min", "Max")]
+            
+           peak.summary <-  as.data.frame(peak.table %>%
+            group_by(Type) %>%
+            summarise_all(funs(toString)))
+            
+            peak.summary <-  as.data.frame(peak.table %>%
+            group_by(Type, Spectrum) %>%
+            summarise_all(funs(toString)))
+            
+            peak.summary$Min <- as.vector(sapply(peak.summary$Min, function(x) keep_singles(as.vector(unlist(strsplit(x, split=","))))))
+            peak.summary$Max <- as.vector(sapply(peak.summary$Max, function(x) keep_singles(as.vector(unlist(strsplit(x, split=","))))))
+            
+            peak.summary
+
+            
+        })
+        
         
         output$peaktableid <- renderDataTable({
             
-            peakID()
+            summaryID()
             
         })
         
@@ -337,7 +359,7 @@ shinyServer(function(input, output, session) {
         filename = function() { paste("FTIR Results", ".csv") },
         content = function(file
         ) {
-            write.csv(peakID(), file)
+            write.csv(summaryID(), file)
         }
         )
         

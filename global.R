@@ -25,6 +25,10 @@ options(digits=4)
 options(warn=-1)
 assign("last.warning", NULL, envir = baseenv())
 
+keep_singles <- function(v){
+    v[!(v %in% v[duplicated(v)])]
+}
+
 Hodder.v <- function(y)
 {
     
