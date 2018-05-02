@@ -322,8 +322,11 @@ shinyServer(function(input, output, session) {
             
             data$Peak <- round(data$Peak, 0)
             
-            new.data <- data[,c("Spectrum", "General", "Type", "Peak", "Max", "Mid", "Min", "Peak.Range")]
-            new.data[!duplicated(new.data), ]
+            new.data <- data[,c("Spectrum", "Group", "Type", "Peak", "Max", "Mid", "Min", "Peak.Range")]
+            new.data <- new.data[!duplicated(new.data), ]
+            
+            new.data[order(new.data$Group, new.data$Type, -new.data$Peak),]
+
             
         })
         
@@ -332,11 +335,11 @@ shinyServer(function(input, output, session) {
 
             peak.table <- peakID()
             
-            peak.table <- peak.table[,c("General", "Peak.Range", "Spectrum", "Type", "Peak")]
+            peak.table <- peak.table[,c("Group", "Peak.Range", "Spectrum", "Type", "Peak")]
             
             
             peak.summary <-  as.data.frame(peak.table %>%
-            group_by(General, Peak.Range, Type, Spectrum) %>%
+            group_by(Group, Peak.Range, Type, Spectrum) %>%
             summarise_all(funs(toString)))
             
             
@@ -344,8 +347,8 @@ shinyServer(function(input, output, session) {
             #peak.summary$Min <- as.vector(sapply(peak.summary$Min, function(x) keep_singles(strsplit(x, split=","))))
             #peak.summary$Max <- as.vector(sapply(peak.summary$Max, function(x) keep_singles(strsplit(x, split=","))))
             
-            peak.result <- dcast(peak.summary, General+Peak.Range+Type ~ Spectrum)
-            peak.result <- peak.result[order(peak.result$General, peak.result$Type),]
+            peak.result <- dcast(peak.summary, Group+Peak.Range+Type ~ Spectrum)
+            peak.result <- peak.result[order(peak.result$Group, peak.result$Type),]
             peak.result[is.na(peak.result)]   <- " "
             peak.result
             
