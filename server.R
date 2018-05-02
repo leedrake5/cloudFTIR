@@ -259,7 +259,7 @@ shinyServer(function(input, output, session) {
                 names(newdata) <- names(data)
                 newdata <- lapply(names(newdata), function(x) as.data.frame(newdata[[x]][newdata[[x]]$findpeaks, ]))
                 final.data <- as.data.frame(do.call(rbind, newdata))
-                final.data
+                final.data[,c("Spectrum", "Wavelength", "Intensity")]
             }
             
             
@@ -273,7 +273,7 @@ shinyServer(function(input, output, session) {
         
         
         output$downloadPeakTable <- downloadHandler(
-        filename = function() { paste("FTIR Results", ".csv") },
+        filename = function() { paste0(input$projectname, "_Peaks", ".csv") },
         content = function(file
         ) {
             write.csv(peakTable(), file)
@@ -320,30 +320,34 @@ shinyServer(function(input, output, session) {
             
             data <- do.call(rbind, table.list)
             
-            data[,c("Spectrum", "General", "Type", "Peak", "Max", "Mid", "Min")]
-
+            data$Peak <- round(data$Peak, 0)
+            
+            new.data <- data[,c("Spectrum", "General", "Type", "Peak", "Max", "Mid", "Min", "Peak.Range")]
+            new.data[!duplicated(new.data), ]
             
         })
         
         summaryID <- reactive({
             
+
             peak.table <- peakID()
             
-            peak.table <- peak.table[,c("Spectrum", "Type", "Peak", "Min", "Max")]
+            peak.table <- peak.table[,c("General", "Peak.Range", "Spectrum", "Type", "Peak")]
             
-           peak.summary <-  as.data.frame(peak.table %>%
-            group_by(Type) %>%
-            summarise_all(funs(toString)))
             
             peak.summary <-  as.data.frame(peak.table %>%
-            group_by(Type, Spectrum) %>%
+            group_by(General, Peak.Range, Type, Spectrum) %>%
             summarise_all(funs(toString)))
             
-            peak.summary$Min <- as.vector(sapply(peak.summary$Min, function(x) keep_singles(as.vector(unlist(strsplit(x, split=","))))))
-            peak.summary$Max <- as.vector(sapply(peak.summary$Max, function(x) keep_singles(as.vector(unlist(strsplit(x, split=","))))))
             
-            peak.summary
-
+            
+            #peak.summary$Min <- as.vector(sapply(peak.summary$Min, function(x) keep_singles(strsplit(x, split=","))))
+            #peak.summary$Max <- as.vector(sapply(peak.summary$Max, function(x) keep_singles(strsplit(x, split=","))))
+            
+            peak.result <- dcast(peak.summary, General+Peak.Range+Type ~ Spectrum)
+            peak.result <- peak.result[order(peak.result$General, peak.result$Type),]
+            peak.result[is.na(peak.result)]   <- " "
+            peak.result
             
         })
         
@@ -356,7 +360,7 @@ shinyServer(function(input, output, session) {
         
         
         output$downloadPeakTableID <- downloadHandler(
-        filename = function() { paste("FTIR Results", ".csv") },
+        filename = function() { paste0(input$projectname, "_PeakID", ".csv") },
         content = function(file
         ) {
             write.csv(summaryID(), file)
@@ -403,7 +407,7 @@ shinyServer(function(input, output, session) {
         
         
         output$downloadPeakTableSummary <- downloadHandler(
-        filename = function() { paste("Summary Results", ".csv") },
+        filename = function() { paste0(input$projectname, "_Summary", ".csv") },
         content = function(file
         ) {
             write.csv(summaryTable(), file)
@@ -440,10 +444,10 @@ shinyServer(function(input, output, session) {
         
         
         output$downloadsummaryplot <- downloadHandler(
-        filename = function() { paste("Summary Plot") },
+        filename = function() { paste0(input$projectname, "_Summary", ".jpg") },
         content = function(file
         ) {
-            ggsave(file,summaryPlot(), width=10, height=10)
+            ggsave(file,summaryPlot(), width=15, height=10, device="jpeg")
         }
         )
         
@@ -465,7 +469,7 @@ shinyServer(function(input, output, session) {
              theme_light()+
              theme(legend.position="bottom") +
              scale_colour_discrete("Spectrum") +
-             scale_x_reverse("Wavelength (nm)", limits=c(max(data[,2]), min(data[,2])), breaks=seq(0, 4000, 250)) +
+             scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), limits=c(max(data[,2]), min(data[,2])), breaks=seq(0, 4000, 250)) +
              scale_y_continuous("Intensity") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
              geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3) +
@@ -481,7 +485,7 @@ shinyServer(function(input, output, session) {
              geom_line(aes(Wavelength, Intensity)) +
              theme_light()+
              theme(legend.position="bottom") +
-             scale_x_reverse("Wavelength (nm)", breaks=seq(0, 4000, 250)) +
+             scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), breaks=seq(0, 4000, 250)) +
              scale_y_continuous("Intensity") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
              geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3) +
@@ -498,7 +502,7 @@ shinyServer(function(input, output, session) {
              theme_light()+
              theme(legend.position="bottom") +
              scale_colour_discrete("Spectrum") +
-             scale_x_reverse("Wavelength (nm)", breaks=seq(0, 4000, 250)) +
+             scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), breaks=seq(0, 4000, 250)) +
              scale_y_reverse("Intensity") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
              geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3) +
@@ -514,7 +518,7 @@ shinyServer(function(input, output, session) {
              geom_line(aes(Wavelength, Intensity)) +
              theme_light()+
              theme(legend.position="bottom") +
-             scale_x_reverse("Wavelength (nm)", breaks=seq(0, 4000, 250)) +
+             scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), breaks=seq(0, 4000, 250)) +
              scale_y_reverse("Intensity") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
              geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3) +
@@ -600,9 +604,9 @@ shinyServer(function(input, output, session) {
         })
         
         output$downloadPlot <- downloadHandler(
-        filename = function() { paste(input$dataset, '.png', sep='') },
+        filename = function() { paste0(input$projectname, '.jpg', sep='') },
         content = function(file) {
-            ggsave(file,plotInput(), width=10, height=10)
+            ggsave(file,plotInput(), width=14, height=8, device="jpeg")
         }
         )
         

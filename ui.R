@@ -18,6 +18,7 @@ ui=list(
 tagList(
 header=tags$head(tags$style(".table .alignRight {color: black; text-align:right;}"))),
 
+tags$head(tags$script("$(function() {$.fn.dataTableExt.errMode = 'throw';});")),
 
 shinyUI(navbarPage("cloudFTIR", id="nav", theme = shinytheme("flatly"),
 
@@ -41,10 +42,10 @@ tags$hr(),
 
 #actionButton('actionprocess', label = "Process Data"),
 downloadButton('downloadPlot', "Plot"),
-downloadButton('downloadPeakTable', "Table"),
-downloadButton('downloadPeakTableID', "ID"),
+downloadButton('downloadPeakTableID', "Peak ID"),
 downloadButton('downloadPeakTableSummary', "Summary"),
 downloadButton('downloadsummaryplot', "Summary Plot"),
+downloadButton('downloadPeakTable', "Raw"),
 
 
 
@@ -62,10 +63,10 @@ tooltip = tooltipOptions(title = "Click for manual options")
 checkboxInput('showpeaks', "Show Peaks", value=TRUE),
 
 
-sliderInput('spikesensitivity', "Spike Sensitivity", min=0.1, max=100, value=20),
+sliderInput('spikesensitivity', "Spike Proximity", min=0.1, max=100, value=20),
 #uiOutput('uispikeheight'),
 sliderInput('spikeheight', "Spike Height", min=0, max=1, value=.2),
-sliderInput('wavethreshold', "Wave SD", min=0, max=20, value=3),
+sliderInput('wavethreshold', "Accepted Wavenumber Buffer", min=0, max=20, value=3),
 
 
 
@@ -96,7 +97,6 @@ tabPanel("Plot",
             hover = hoverOpts('plot_hover_spectrum', delay = 100, delayType = "debounce")),
         uiOutput('hover_info_spectrum'))
 ),
-tabPanel("Table", dataTableOutput('peaktable')),
 tabPanel("Peak ID", dataTableOutput('peaktableid')),
 tabPanel("Summary", dataTableOutput('peaktablesummary')),
 tabPanel("Summary Plot",
@@ -106,7 +106,8 @@ tabPanel("Summary Plot",
             dblclick = 'sumplot1_dblclick',
             brush = brushOpts(id = 'sumplot1_brush', resetOnNew = TRUE),
         hover = hoverOpts('sumplot_hover_spectrum', delay = 100, delayType = "debounce"))
-))
+)),
+tabPanel("Raw Data", dataTableOutput('peaktable'))
 
 ))
 )
