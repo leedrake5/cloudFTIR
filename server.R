@@ -273,6 +273,19 @@ shinyServer(function(input, output, session) {
         peaks <- reactiveValues()
         peaks$findpeaks <- findPeaks()
         
+        observe({
+            if (input$showpeaks == FALSE){
+            peaks$findpeaks <- idNull()
+            }
+        })
+        
+        observe({
+            if (input$showpeaks == TRUE){
+                peaks$findpeaks <- idPeaks()
+            }
+        })
+
+        
 
         
         
