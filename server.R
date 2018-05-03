@@ -221,24 +221,59 @@ shinyServer(function(input, output, session) {
             
         })
         
-        findPeaks <- reactive({
+        
+        idPeaks <- reactive({
             
             data.list <- dataSplit()
             
             index <- names(data.list)
 
-
             
-            
-            if(input$showpeaks==TRUE){
                 data <- lapply(index, function(x) as.vector(peakpick(matrix(data.list[[x]][,3], ncol=1), neighlim=input$spikesensitivity, peak.min.sd=input$spikeheight*max(data.list[[x]][,3]))[,1]))
                 names(data) <- index
+                
                 data
-            } else if(input$showpeaks==FALSE){
-                NULL
-            }
             
         })
+        
+        idNull <- reactive({
+            
+            data.list <- dataSplit()
+            
+            index <- names(data.list)
+            
+            data <- lapply(index, function(x) rep(FALSE, length(data.list[[x]][,1])))
+            names(data) <- index
+            data
+            
+        })
+        
+        findPeaks <- reactive({
+           
+           if(input$showpeaks==TRUE){
+               idPeaks()
+            } else if(input$showpeaks==FALSE){
+                idNull()
+            }
+           
+            
+        })
+        
+        output$downloadfp <- downloadHandler(
+        filename <- function(){
+            paste(input$projectname, "fp", sep=".")
+        },
+        
+        content = function(file) {
+            saveRDS(findPeaks(), file = file, compress="xz")
+        }
+        )
+        
+        
+        peaks <- reactiveValues()
+        peaks$findpeaks <- findPeaks()
+        
+
         
         
         peakTable <- reactive({
@@ -247,20 +282,18 @@ shinyServer(function(input, output, session) {
             index <- names(data)
 
             for(i in 1:length(index)){
-                data[[i]]$findpeaks <- findPeaks()[[i]]
+                data[[i]]$findpeaks <- peaks$findpeaks[[i]]
                     
             }
             
             
-            if(input$showpeaks==FALSE){
-                data.frame(Spectrum=c("test"), Wavelength=c(-200), Intensity=c(0))
-            } else if(input$showpeaks==TRUE){
                 newdata <- lapply(names(data), function(x) subset(data[[x]], data[[x]]$Intensity > (input$spikeheight*max(data[[x]]$Intensity))))
                 names(newdata) <- names(data)
                 newdata <- lapply(names(newdata), function(x) as.data.frame(newdata[[x]][newdata[[x]]$findpeaks, ]))
                 final.data <- as.data.frame(do.call(rbind, newdata))
                 final.data[,c("Spectrum", "Wavelength", "Intensity")]
-            }
+
+            
             
             
         })
@@ -308,7 +341,6 @@ shinyServer(function(input, output, session) {
         })
         
         
-        
         peakID <- reactive({
             
             pritable[pritable.range.index, ]$Min <- pritable[pritable.range.index, ]$Mid-input$wavethreshold
@@ -320,9 +352,20 @@ shinyServer(function(input, output, session) {
             
             data <- do.call(rbind, table.list)
             
-            data$Peak <- round(data$Peak, 0)
+            data[,c("Spectrum", "General", "Group", "Type", "Peak", "Max", "Mid", "Min", "Peak.Range")]
             
-            new.data <- data[,c("Spectrum", "Group", "Type", "Peak", "Max", "Mid", "Min", "Peak.Range")]
+            
+        })
+        
+        
+        
+        peakIDDisplay <- reactive({
+            
+
+            
+            new.data <- peakID()
+            new.data <- new.data[,c("Spectrum", "Group", "Type", "Peak", "Max", "Mid", "Min", "Peak.Range")]
+
             new.data <- new.data[!duplicated(new.data), ]
             
             new.data[order(new.data$Group, new.data$Type, -new.data$Peak),]
@@ -333,7 +376,7 @@ shinyServer(function(input, output, session) {
         summaryID <- reactive({
             
 
-            peak.table <- peakID()
+            peak.table <- peakIDDisplay()
             
             peak.table <- peak.table[,c("Group", "Peak.Range", "Spectrum", "Type", "Peak")]
             
@@ -612,6 +655,40 @@ shinyServer(function(input, output, session) {
             ggsave(file,plotInput(), width=14, height=8, device="jpeg")
         }
         )
+        
+        # Toggle points that are clicked
+        observeEvent(input$plot1_click, {
+            
+            predict.frame <- dataManipulate()
+            
+            res <- nearPoints(predict.frame, input$plot1_click, allRows = TRUE, maxpoints=1)
+            
+            temprows <- xor(unlist(peaks$findpeaks), res$selected_)
+            
+            peaks$findpeaks <- relist(flesh=temprows, skeleton=peaks$findpeaks)
+        })
+        
+        
+        
+        # Toggle points that are brushed, when button is clicked
+        observeEvent(input$exclude_toggle, {
+            
+            predict.frame <- dataManipulate()
+            res <- brushedPoints(predict.frame, input$plot1_brush, allRows = TRUE)
+            
+            temprows <- xor(unlist(peaks$findpeaks), res$selected_)
+            
+            peaks$findpeaks <- relist(flesh=temprows, skeleton=peaks$findpeaks)        })
+        
+        
+        
+        # Reset all points
+        observeEvent(input$exclude_reset, {
+            
+            predict.frame <- dataManipulate()
+
+            peaks$findpeaks <- findPeaks()
+        })
         
          })
     

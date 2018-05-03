@@ -46,7 +46,7 @@ downloadButton('downloadPeakTableID', "Peak ID"),
 downloadButton('downloadPeakTableSummary', "Summary"),
 downloadButton('downloadsummaryplot', "Summary Plot"),
 downloadButton('downloadPeakTable', "Raw"),
-
+#downloadButton('downloadfp', "FP"),
 
 
 
@@ -91,11 +91,13 @@ tabsetPanel(
 tabPanel("Plot",
     div(
         style = "position:relative",
-        plotOutput('distPlot', height = 685,
+        plotOutput('distPlot', height = 685, click='plot1_click',
             dblclick = 'plot1_dblclick',
             brush = brushOpts(id = 'plot1_brush', resetOnNew = TRUE),
             hover = hoverOpts('plot_hover_spectrum', delay = 100, delayType = "debounce")),
-        uiOutput('hover_info_spectrum'))
+        uiOutput('hover_info_spectrum')),
+actionButton("exclude_toggle", "Toggle points"),
+actionButton("exclude_reset", "Reset")
 ),
 tabPanel("Peak ID", dataTableOutput('peaktableid')),
 tabPanel("Summary", dataTableOutput('peaktablesummary')),
@@ -106,6 +108,7 @@ tabPanel("Summary Plot",
             dblclick = 'sumplot1_dblclick',
             brush = brushOpts(id = 'sumplot1_brush', resetOnNew = TRUE),
         hover = hoverOpts('sumplot_hover_spectrum', delay = 100, delayType = "debounce"))
+
 )),
 tabPanel("Raw Data", dataTableOutput('peaktable'))
 
