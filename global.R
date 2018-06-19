@@ -159,6 +159,30 @@ readOpusData <- function(filepath, filename){
     
 }
 
+range_subset <- function(range.frame, data){
+    
+    new.data <- subset(data, Wavenumber >= range.frame$WaveMin & Wavenumber <= range.frame$WaveMax, drop=TRUE)
+    newer.data <- aggregate(new.data, by=list(new.data$Spectrum), FUN=mean, na.rm=TRUE)[,c("Group.1", "Amplitude")]
+    colnames(newer.data) <- c("Spectrum", as.character(range.frame$Name))
+    newer.data
+}
+
+ftir_parse <- function(range.table, data){
+    
+    choice.lines <- range.table[complete.cases(range.table),]
+    
+    choice.list <- split(choice.lines, f=choice.lines$Name)
+    names(choice.list) <- choice.lines[,"Name"]
+    
+    index <- choice.lines[,"Name"]
+    
+    selected.list <- lapply(index, function(x) range_subset(range.frame=choice.list[[x]], data=data))
+    
+    Reduce(function(...) merge(..., all=T), selected.list)
+}
+
+
+
 
 
 

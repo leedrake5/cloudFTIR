@@ -344,6 +344,44 @@ tabPanel("Used", rHandsontableOutput("whichrowstokeep"))))
 
 ))
 
+)),
+
+tabPanel("Apply Calibration",
+div(class="outer",
+
+fluidRow(
+sidebarLayout(
+sidebarPanel(width=3,
+
+actionButton('processvalspectra', "Quantify"),
+
+
+tags$hr(),
+
+uiOutput('filevalgrab'),
+
+selectInput("valfiletype", label="Filetype", c("DPT", "CSV", "Opus"), selected="DPT"),
+
+
+tags$hr(),
+tags$hr(),
+tags$hr(),
+
+fileInput('calfileinput2', 'Load Cal File', accept=".quant", multiple=FALSE),
+
+downloadButton('downloadValData', "Results")
+
+),
+
+
+mainPanel(
+tabsetPanel(
+id = 'dataset2',
+tabPanel('Validation', dataTableOutput('myvaltable2')),
+tabPanel('Counts', dataTableOutput('myvaltable1'))
+
+))
+))
 ))
 
 ))

@@ -924,26 +924,7 @@ shinyServer(function(input, output, session) {
     
     waveSubset <- reactive({
         
-        spectra.data <- dataManipulate()
-        choice.lines <- wavevalues[["DF"]]
-        choice.lines <- choice.lines[complete.cases(choice.lines),]
-        
-        choice.list <- split(choice.lines, f=choice.lines$Name)
-        names(choice.list) <- choice.lines[,"Name"]
-        
-        index <- choice.lines[,"Name"]
-        
-        range_subset <- function(range.frame, data){
-            
-            new.data <- subset(data, Wavenumber >= range.frame$WaveMin & Wavenumber <= range.frame$WaveMax, drop=TRUE)
-            newer.data <- aggregate(new.data, by=list(new.data$Spectrum), FUN=mean, na.rm=TRUE)[,c("Group.1", "Amplitude")]
-            colnames(newer.data) <- c("Spectrum", as.character(range.frame$Name))
-            newer.data
-        }
-            
-            selected.list <- lapply(index, function(x) range_subset(range.frame=choice.list[[x]], data=spectra.data))
-            
-            Reduce(function(...) merge(..., all=T), selected.list)
+        ftir_parse(range.table = wavevalues[["DF"]], data=dataManipulate())
 
     })
     
@@ -3976,10 +3957,12 @@ shinyServer(function(input, output, session) {
             dataManipulate()
         }
         
+        cal.defs <- wavevalues[["DF"]]
+        
         
         calibrationList <- NULL
-        calibrationList <- list(input$filetype, input$calunits, cal.data, cal.intensities, cal.values, calList)
-        names(calibrationList) <- c("FileType", "Units", "Spectra", "Intensities", "Values", "calList")
+        calibrationList <- list(input$filetype, input$calunits, cal.data, cal.intensities, cal.values, cal.defs, calList)
+        names(calibrationList) <- c("FileType", "Units", "Spectra", "Intensities", "Values", "Definitions", "calList")
         
         Calibration <<- calibrationList
         
@@ -4024,6 +4007,511 @@ shinyServer(function(input, output, session) {
     })
     
     
+    })
+    
+    
+    output$filevalgrab <- renderUI({
+        
+        if(input$filetype=="CSV") {
+            fileInput('loadvaldata', 'Choose CSV', multiple=TRUE,
+            accept=c(".csv"))
+        } else if(input$filetype=="DPT") {
+            fileInput('loadvaldata', 'Choose DPT', multiple=TRUE,
+            accept=c(".dpt"))
+        } else if(input$filetype=="Opus") {
+            fileInput('loadvaldata', 'Choose Opus File', multiple=TRUE,
+            accept=NULL)
+        }
+        
+    })
+    
+    
+    
+    observeEvent(input$processvalspectra, {
+        
+        readValDPT <- reactive({
+            
+            inFile <- input$loadvaldata
+            if (is.null(inFile)) return(NULL)
+            
+            n <- length(inFile$datapath)
+            names <- inFile$name
+            
+            myfiles.frame <- as.data.frame(do.call(rbind, pblapply(seq(1, n, 1), function(x) readDPTData(filepath=inFile$datapath[x], filename=inFile$name[x]))))
+            
+            myfiles.frame$Wavenumber <- myfiles.frame$Wavenumber + gainshiftHold()
+            
+            myfiles.frame
+            
+        })
+        
+        
+        readValCSV <- reactive({
+            
+            inFile <- input$loadvaldata
+            if (is.null(inFile)) return(NULL)
+            
+            n <- length(inFile$datapath)
+            names <- inFile$name
+            
+            myfiles.frame <- as.data.frame(do.call(rbind, pblapply(seq(1, n, 1), function(x) readCSVData(filepath=inFile$datapath[x], filename=inFile$name[x]))))
+            
+            myfiles.frame$Wavenumber <- myfiles.frame$Wavenumber + gainshiftHold()
+            
+            myfiles.frame
+            
+        })
+        
+        
+        readValOpus <- reactive({
+            
+            inFile <- input$loadvaldata
+            if (is.null(inFile)) return(NULL)
+            
+            n <- length(inFile$datapath)
+            names <- inFile$name
+            
+            myfiles.frame <- as.data.frame(do.call(rbind, pblapply(seq(1, n, 1), function(x) readOpusData(filepath=inFile$datapath[x], filename=inFile$name[x]))))
+            
+            myfiles.frame$Wavenumber <- myfiles.frame$Wavenumber + gainshiftHold()
+            
+            myfiles.frame
+            
+            
+        })
+        
+        
+        
+        
+        
+        myValData <- reactive({
+            
+            data <- if(input$valfiletype=="Opus"){
+                readValOpus()
+            } else if(input$valfiletype=="DPT"){
+                readValDPT()
+            } else if(input$valfiletype=="CSV"){
+                readValCSV()
+            } 
+            
+            data
+            
+        })
+        
+        
+        
+        calFileContents2 <- reactive({
+            
+            existingCalFile <- input$calfileinput2
+            
+            if (is.null(existingCalFile)) return(NULL)
+            
+            
+            Calibration <- readRDS(existingCalFile$datapath)
+            
+            Calibration
+            
+        })
+        
+        valdata <- myValData()
+        
+        
+        
+        output$contents2 <- renderTable({
+            
+            
+            
+            myValData()
+            
+        })
+        
+        calDefinitions <- reactive({
+            
+            calFileContents2()[["Definitions"]]
+            
+        })
+        
+        calValHold <- reactive({
+            
+            
+            calFileContents2()[["calList"]]
+ 
+            
+        })
+        
+        calVariables <- reactive({
+            
+            
+            calFileContents2()$Intensities
+            
+            
+            
+        })
+        
+        calValElements <- reactive({
+            
+            as.vector(calDefinitions()$Name)
+          
+        })
+        
+        calVariableElements <- reactive({
+            variables <- calVariables()
+            variableelements <- ls(variables)
+            
+            #variableelements.simp <- gsub(".K.alpha", "", variableelements)
+            #variableelements.simp <- gsub(".K.beta", "", variableelements)
+            #variableelements.simp <- gsub(".L.alpha", "", variableelements)
+            #variableelements.simp <- gsub(".L.beta", "", variableelements)
+            #variableelements.simp <- gsub(".M.line", "", variableelements)
+            
+            #variableelements <- as.vector(as.character(na.omit(variableelements[match(as.character(fluorescence.lines$Symbol), variableelements.simp)])))
+            
+            variableelements
+        })
+        
+        valDataType <- reactive({
+            
+            if(input$valfiletype=="Opus"){
+                "Spectra"
+            } else if(input$valfiletype=="DPT"){
+                "Spectra"
+            } else if(input$valfiletype=="CSV"){
+                "Spectra"
+            }
+            
+        })
+        
+        
+        
+        
+        
+        
+        tableInputValCounts <- reactive({
+            
+            ftir_parse(range.table = calDefinitions(), data=myValData())
+            
+        })
+        
+        
+        
+        
+        fullInputValCounts <- reactive({
+            
+            tableInputValCounts()
+            
+        })
+        
+        
+        
+        output$myvaltable1 <- renderDataTable({
+            
+            fullInputValCounts()
+            
+        })
+        
+        
+        
+        
+        tableInputValQuant <- reactive({
+            
+            
+            
+            count.table <- data.frame(fullInputValCounts())
+            the.cal <- calValHold()
+            elements.cal <- calValElements()
+            elements <- elements.cal[!is.na(match(elements.cal, ls(count.table)))]
+            variables <- calVariableElements()
+            valdata <- myValData()
+            
+            #elements <- fluorescence.lines$Symbol[sort(order(fluorescence.lines$Symbol)[elements])]
+            
+            cal_type <- function(element){
+                
+                
+                if(the.cal[[element]][[1]]$CalTable$CalType==1){
+                    1
+                } else if(the.cal[[element]][[1]]$CalTable$CalType==2){
+                    1
+                } else if(the.cal[[element]][[1]]$CalTable$CalType==3){
+                    3
+                } else if(the.cal[[element]][[1]]$CalTable$CalType==4){
+                    4
+                }
+                
+            }
+            
+            
+            
+            predicted.list <- lapply(elements, function (x)
+            if(valDataType()=="Spectra" && cal_type(x)==1 && the.cal[[x]][[1]]$CalTable$NormType==1){
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=general.prep(
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x)
+                )
+            } else if(valDataType()=="Spectra" && cal_type(x)==1 && the.cal[[x]][[1]]$CalTable$NormType==2) {
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=simple.tc.prep(
+                data=valdata,
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x
+                )
+                )
+            } else if(valDataType()=="Spectra" && cal_type(x)==1 && the.cal[[x]][[1]]$CalTable$NormType==3) {
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=simple.comp.prep(
+                data=valdata,
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x,
+                norm.min=the.cal[[x]][[1]][1]$CalTable$Min,
+                norm.max=the.cal[[x]][[1]][1]$CalTable$Max
+                )
+                )
+            } else if(valDataType()=="Spectra" && cal_type(x)==3 && the.cal[[x]][[1]]$CalTable$NormType==1){
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=lucas.simp.prep(
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x,
+                slope.element.lines=the.cal[[x]][[1]][2]$Slope,
+                intercept.element.lines=the.cal[[x]][[1]][3]$Intercept
+                )
+                )
+            } else if(valDataType()=="Spectra" && cal_type(x)==3 && the.cal[[x]][[1]]$CalTable$NormType==2){
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=lucas.tc.prep(
+                data=valdata,
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x,
+                slope.element.lines=the.cal[[x]][[1]][2]$Slope,
+                intercept.element.lines=the.cal[[x]][[1]][3]$Intercept
+                )
+                )
+            } else if(valDataType()=="Spectra" && cal_type(x)==3 && the.cal[[x]][[1]]$CalTable$NormType==3){
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=lucas.comp.prep(
+                data=valdata,
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x,
+                slope.element.lines=the.cal[[x]][[1]][2]$Slope,
+                intercept.element.lines=the.cal[[x]][[1]][3]$Intercept,
+                norm.min=the.cal[[x]][[1]][1]$CalTable$Min,
+                norm.max=the.cal[[x]][[1]][1]$CalTable$Max
+                )
+                )
+            } else if(valDataType()=="Spectra" && cal_type(x)==4 && the.cal[[x]][[1]]$CalTable$NormType==1){
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=lucas.simp.prep(
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x,
+                slope.element.lines=variables,
+                intercept.element.lines=the.cal[[x]][[1]][3]$Intercept
+                )
+                )
+            } else if(valDataType()=="Spectra" && cal_type(x)==4 && the.cal[[x]][[1]]$CalTable$NormType==2){
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=lucas.tc.prep(
+                data=valdata,
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x,
+                slope.element.lines=variables,
+                intercept.element.lines=the.cal[[x]][[1]][3]$Intercept
+                )
+                )
+            } else if(valDataType()=="Spectra" && cal_type(x)==4 && the.cal[[x]][[1]]$CalTable$NormType==3){
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=lucas.comp.prep(
+                data=valdata,
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x,
+                slope.element.lines=variables,
+                intercept.element.lines=the.cal[[x]][[1]][3]$Intercept,
+                norm.min=the.cal[[x]][[1]][1]$CalTable$Min,
+                norm.max=the.cal[[x]][[1]][1]$CalTable$Max
+                )
+                )
+            } else if(valDataType()=="Net" && cal_type(x)==1 && the.cal[[x]][[1]]$CalTable$NormType==1){
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=general.prep.net(
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x)
+                )
+            } else if(valDataType()=="Net" && cal_type(x)==1 && the.cal[[x]][[1]]$CalTable$NormType==2) {
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=simple.tc.prep.net(
+                data=valdata,
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x
+                )
+                )
+            } else if(valDataType()=="Net" && cal_type(x)==1 && the.cal[[x]][[1]]$CalTable$NormType==3) {
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=simple.comp.prep.net(
+                data=valdata,
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x,
+                norm.min=the.cal[[x]][[1]][1]$CalTable$Min,
+                norm.max=the.cal[[x]][[1]][1]$CalTable$Max
+                )
+                )
+            } else if(valDataType()=="Net" && cal_type(x)==3 && the.cal[[x]][[1]]$CalTable$NormType==1){
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=lucas.simp.prep.net(
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x,
+                slope.element.lines=the.cal[[x]][[1]][2]$Slope,
+                intercept.element.lines=the.cal[[x]][[1]][3]$Intercept
+                )
+                )
+            } else if(valDataType()=="Net" && cal_type(x)==3 && the.cal[[x]][[1]]$CalTable$NormType==2){
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=lucas.tc.prep.net(
+                data=valdata,
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x,
+                slope.element.lines=the.cal[[x]][[1]][2]$Slope,
+                intercept.element.lines=the.cal[[x]][[1]][3]$Intercept
+                )
+                )
+            } else if(valDataType()=="Net" && cal_type(x)==3 && the.cal[[x]][[1]]$CalTable$NormType==3){
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=lucas.comp.prep.net(
+                data=valdata,
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x,
+                slope.element.lines=the.cal[[x]][[1]][2]$Slope,
+                intercept.element.lines=the.cal[[x]][[1]][3]$Intercept,
+                norm.min=the.cal[[x]][[1]][1]$CalTable$Min,
+                norm.max=the.cal[[x]][[1]][1]$CalTable$Max
+                )
+                )
+            } else if(valDataType()=="Net" && cal_type(x)==4 && the.cal[[x]][[1]]$CalTable$NormType==1){
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=lucas.simp.prep.net(
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x,
+                slope.element.lines=variables,
+                intercept.element.lines=the.cal[[x]][[1]][3]$Intercept
+                )
+                )
+            } else if(valDataType()=="Net" && cal_type(x)==4 && the.cal[[x]][[1]]$CalTable$NormType==2){
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=lucas.tc.prep.net(
+                data=valdata,
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x,
+                slope.element.lines=variables,
+                intercept.element.lines=the.cal[[x]][[1]][3]$Intercept
+                )
+                )
+            } else if(valDataType()=="Net" && cal_type(x)==4 && the.cal[[x]][[1]]$CalTable$NormType==3){
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=lucas.comp.prep.net(
+                data=valdata,
+                spectra.line.table=as.data.frame(
+                count.table
+                ),
+                element.line=x,
+                slope.element.lines=variables,
+                intercept.element.lines=the.cal[[x]][[1]][3]$Intercept,
+                norm.min=the.cal[[x]][[1]][1]$CalTable$Min,
+                norm.max=the.cal[[x]][[1]][1]$CalTable$Max
+                )
+                )
+            }
+            )
+            
+            predicted.vector <- unlist(predicted.list)
+            
+            dim(predicted.vector) <- c(length(count.table$Spectrum), length(elements))
+            
+            predicted.frame <- data.frame(count.table$Spectrum, predicted.vector)
+            
+            colnames(predicted.frame) <- c("Spectrum", elements)
+            #elements <- elements[order(match(fluorescence.lines$Symbol, elements))]
+            
+            
+            
+            predicted.data.table <- predicted.frame
+            
+            #predicted.values <- t(predicted.values)
+            predicted.data.table
+            
+            
+        })
+        
+        output$myvaltable2 <- renderDataTable({
+            
+            tableInputValQuant()
+            
+        })
+        
+        
+        # valtest <- lapply(valelements, function(x) predict(calsList[[x]], as.data.frame(val.line.table[x])))
+        
+        output$downloadValData <- downloadHandler(
+        filename = function() { paste(input$calname, "_ValData", '.csv', sep='', collapse='') },
+        content = function(file
+        ) {
+            write.csv(tableInputValQuant(), file)
+        }
+        )
+        
+        
+        
+        
+        
     })
 
          
