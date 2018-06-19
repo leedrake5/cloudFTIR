@@ -1235,7 +1235,11 @@ shinyServer(function(input, output, session) {
     })
     
     
-    
+    dataNorm <- reactive({
+        
+        dataManipulate()
+        
+    })
     
     ########Machine Learning: Normalization
     

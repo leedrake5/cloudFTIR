@@ -568,7 +568,7 @@ linear.tc <- function(concentration.table, spectra.line.table, element.line) {
     
     
     
-    predict.frame.tc <- data.frame(concentration, Amplitude/total.counts$CPS)
+    predict.frame.tc <- data.frame(concentration, Amplitude/total.counts$Amplitude)
     colnames(predict.frame.tc) <- c("Concentration", "Amplitude")
     
     
@@ -599,7 +599,7 @@ poly.tc <- function(concentration.table, spectra.line.table, element.line) {
     
     
     
-    predict.frame.tc <- data.frame(concentration, Amplitude/total.counts$CPS)
+    predict.frame.tc <- data.frame(concentration, Amplitude/total.counts$Amplitude)
     colnames(predict.frame.tc) <- c("Concentration", "Amplitude")
     
     
@@ -626,17 +626,17 @@ lucas.tc <- function(concentration.table, spectra.line.table, element.line, slop
     
     Amplitude <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
     
-    lucas.intercept.table.tc <- data.frame(rowSums(lucas.intercept.table.x[intercept.element.lines]))/total.counts$CPS
+    lucas.intercept.table.tc <- data.frame(rowSums(lucas.intercept.table.x[intercept.element.lines]))/total.counts$Amplitude
     colnames(lucas.intercept.table.tc) <- c("first")
     
     
     
     lucas.intercept.tc <- lucas.intercept.table.tc$first
-    lucas.slope.tc <- data.frame(lucas.slope.table[slope.element.lines])/total.counts$CPS
+    lucas.slope.tc <- data.frame(lucas.slope.table[slope.element.lines])/total.counts$Amplitude
     
     
     
-    predict.frame.luc.tc <- data.frame(concentration, ((Amplitude/total.counts$CPS-lucas.intercept.tc)/(Amplitude/total.counts$CPS+lucas.intercept.tc)),lucas.slope.tc)
+    predict.frame.luc.tc <- data.frame(concentration, ((Amplitude/total.counts$Amplitude-lucas.intercept.tc)/(Amplitude/total.counts$Amplitude+lucas.intercept.tc)),lucas.slope.tc)
     colnames(predict.frame.luc.tc) <- c("Concentration", "Amplitude", names(lucas.slope.tc))
     
     
@@ -661,7 +661,7 @@ linear.comp <- function(data, concentration.table, spectra.line.table, element.l
     Amplitude <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
     
     
-    compton.norm <- subset(data$CPS, !(data$Wavenumber < input$comptonmin | data$Wavenumber > input$comptonmax))
+    compton.norm <- subset(data$Amplitude, !(data$Wavenumber < input$comptonmin | data$Wavenumber > input$comptonmax))
     compton.file <- subset(data$Spectrum, !(data$Wavenumber < input$comptonmin | data$Wavenumber > input$comptonmax))
     compton.frame <- data.frame(is.0(compton.norm, compton.file))
     colnames(compton.frame) <- c("Compton", "Spectrum")
@@ -692,7 +692,7 @@ poly.comp <- function(data, concentration.table, spectra.line.table, element.lin
     Amplitude <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
     
     
-    compton.norm <- subset(data$CPS, !(data$Wavenumber < input$comptonmin | data$Wavenumber > input$comptonmax))
+    compton.norm <- subset(data$Amplitude, !(data$Wavenumber < input$comptonmin | data$Wavenumber > input$comptonmax))
     compton.file <- subset(data$Spectrum, !(data$Wavenumber < input$comptonmin | data$Wavenumber > input$comptonmax))
     compton.frame <- data.frame(is.0(compton.norm, compton.file))
     colnames(compton.frame) <- c("Compton", "Spectrum")
@@ -722,7 +722,7 @@ lucas.comp <- function(data, concentration.table, spectra.line.table, element.li
     Amplitude <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
     
     
-    compton.norm <- subset(data$CPS, !(data$Wavenumber < input$comptonmin | data$Wavenumber > input$comptonmax))
+    compton.norm <- subset(data$Amplitude, !(data$Wavenumber < input$comptonmin | data$Wavenumber > input$comptonmax))
     compton.file <- subset(data$Spectrum, !(data$Wavenumber < input$comptonmin | data$Wavenumber > input$comptonmax))
     compton.frame <- data.frame(is.0(compton.norm, compton.file))
     colnames(compton.frame) <- c("Compton", "Spectrum")
@@ -787,7 +787,7 @@ simple.tc.prep <- function(data,spectra.line.table, element.line) {
     
     
     
-    predict.frame.tc <- data.frame(Amplitude/total.counts$CPS)
+    predict.frame.tc <- data.frame(Amplitude/total.counts$Amplitude)
     colnames(predict.frame.tc) <- c("Amplitude")
     
     
@@ -806,7 +806,7 @@ simple.comp.prep <- function(data, spectra.line.table, element.line, norm.min, n
     Amplitude <- spectra.line.table[,element.line]
     
     
-    compton.norm <- subset(data$CPS, !(data$Wavenumber < norm.min | data$Wavenumber > norm.max))
+    compton.norm <- subset(data$Amplitude, !(data$Wavenumber < norm.min | data$Wavenumber > norm.max))
     compton.file <- subset(data$Spectrum, !(data$Wavenumber < norm.min | data$Wavenumber > norm.max))
     compton.frame <- data.frame(is.0(compton.norm, compton.file))
     colnames(compton.frame) <- c("Compton", "Spectrum")
@@ -900,13 +900,13 @@ lucas.tc.prep <- function(data, spectra.line.table, element.line, slope.element.
     colnames(lucas.slope.table) <- c(names(spectra.line.table), "None")
     
     
-    lucas.intercept.table.tc <- data.frame(rowSums(lucas.intercept.table.x[,c(intercept.element.lines, "None", "NoneNull")]))/total.counts$CPS
+    lucas.intercept.table.tc <- data.frame(rowSums(lucas.intercept.table.x[,c(intercept.element.lines, "None", "NoneNull")]))/total.counts$Amplitude
     colnames(lucas.intercept.table.tc) <- c("first")
     
     
     
     lucas.intercept.tc <- lucas.intercept.table.tc$first
-    lucas.slope.tc <- data.frame(lucas.slope.table[,slope.element.lines])/total.counts$CPS
+    lucas.slope.tc <- data.frame(lucas.slope.table[,slope.element.lines])/total.counts$Amplitude
     colnames(lucas.slope.tc) <- slope.element.lines
     
     
@@ -929,7 +929,7 @@ lucas.comp.prep <- function(data, spectra.line.table, element.line, slope.elemen
     
     
     
-    compton.norm <- subset(data$CPS, !(data$Wavenumber < norm.min | data$Wavenumber > norm.max))
+    compton.norm <- subset(data$Amplitude, !(data$Wavenumber < norm.min | data$Wavenumber > norm.max))
     compton.file <- subset(data$Spectrum, !(data$Wavenumber < norm.min | data$Wavenumber > norm.max))
     compton.frame <- data.frame(is.0(compton.norm, compton.file))
     colnames(compton.frame) <- c("Compton", "Spectrum")
@@ -1011,7 +1011,7 @@ simple.tc.prep.net <- function(data,spectra.line.table, element.line) {
     
     
     
-    predict.frame.tc <- data.frame(Amplitude/total.counts$CPS)
+    predict.frame.tc <- data.frame(Amplitude/total.counts$Amplitude)
     colnames(predict.frame.tc) <- c("Amplitude")
     
     
@@ -1122,14 +1122,14 @@ lucas.tc.prep.net <- function(data, spectra.line.table, element.line, slope.elem
     
     
     
-    lucas.intercept.table.tc <- data.frame(rowSums(lucas.intercept.table.x[,c(intercept.element.lines, "None", "NoneNull")]))/total.counts$CPS
+    lucas.intercept.table.tc <- data.frame(rowSums(lucas.intercept.table.x[,c(intercept.element.lines, "None", "NoneNull")]))/total.counts$Amplitude
     colnames(lucas.intercept.table.tc) <- c("first")
     
     
     
     
     lucas.intercept.tc <- lucas.intercept.table.tc$first
-    lucas.slope.tc <- data.frame(lucas.slope.table[,slope.element.lines])/total.counts$CPS
+    lucas.slope.tc <- data.frame(lucas.slope.table[,slope.element.lines])/total.counts$Amplitude
     colnames(lucas.slope.tc) <- slope.element.lines
     
     
