@@ -118,7 +118,7 @@ readDPTData <- function(filepath, filename){
     file.frame <- data.frame(
     Spectrum=rep(filename, length(file[,1])),
     Wavelength=file[,1],
-    Intensity=file[,2]
+    Amplitude=file[,2]
     )
     
     return(file.frame)
@@ -134,7 +134,7 @@ readCSVData <- function(filepath, filename){
     file.frame <- data.frame(
     Spectrum=rep(filename, length(file[,1])),
     Wavelength=file[,1],
-    Intensity=file[,2]
+    Amplitude=file[,2]
     )
     
     return(file.frame)
@@ -152,7 +152,7 @@ readOpusData <- function(filepath, filename){
     file.frame <- data.frame(
     Spectrum=rep(filename, length(thedata[,1])-1),
     Wavelength=as.numeric(as.vector(substring(rownames(thedata), 2)[2:length(thedata[,1])])),
-    Intensity=as.numeric(as.vector(thedata[,1][2:length(thedata[,1])]))
+    Amplitude=as.numeric(as.vector(thedata[,1][2:length(thedata[,1])]))
     )
     
     return(file.frame)

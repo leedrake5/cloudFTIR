@@ -160,8 +160,8 @@ shinyServer(function(input, output, session) {
             data <- dataHold()
             
             data <- data[order(data$Wavelength),]
-            data$Intensity <- SMA(data$Intensity, 10)
-            data$Spectrum <- rep("Combined", length(data$Intensity))
+            data$Amplitude <- SMA(data$Amplitude, 10)
+            data$Spectrum <- rep("Combined", length(data$Amplitude))
             
             data
 
@@ -175,7 +175,7 @@ shinyServer(function(input, output, session) {
                 dataCombine()
             }
             
-            data$Intensity <- Hodder.v(data$Intensity)
+            data$Amplitude <- Hodder.v(data$Amplitude)
             
             data
 
@@ -197,6 +197,15 @@ shinyServer(function(input, output, session) {
             
             
         })
+        
+        
+        output$downloadData <- downloadHandler(
+        filename = function() { paste0(input$projectname, "_Raw", ".csv") },
+        content = function(file
+        ) {
+            write.csv(dataManipulate(), file)
+        }
+        )
 
 
         dataCount <- reactive({
@@ -300,11 +309,11 @@ shinyServer(function(input, output, session) {
             }
             
             
-                newdata <- lapply(names(data), function(x) subset(data[[x]], data[[x]]$Intensity > (input$spikeheight*max(data[[x]]$Intensity))))
+                newdata <- lapply(names(data), function(x) subset(data[[x]], data[[x]]$Amplitude > (input$spikeheight*max(data[[x]]$Amplitude))))
                 names(newdata) <- names(data)
                 newdata <- lapply(names(newdata), function(x) as.data.frame(newdata[[x]][newdata[[x]]$findpeaks, ]))
                 final.data <- as.data.frame(do.call(rbind, newdata))
-                final.data[,c("Spectrum", "Wavelength", "Intensity")]
+                final.data[,c("Spectrum", "Wavelength", "Amplitude")]
 
             
             
@@ -325,6 +334,7 @@ shinyServer(function(input, output, session) {
             write.csv(peakTable(), file)
         }
         )
+        
         
         intensityDescriptive <- reactive({
             
@@ -524,14 +534,14 @@ shinyServer(function(input, output, session) {
              n <- length(data$Wavelength)
              
             normal <- ggplot(data) +
-             geom_line(aes(Wavelength, Intensity, colour=Spectrum)) +
+             geom_line(aes(Wavelength, Amplitude, colour=Spectrum)) +
              theme_light()+
              theme(legend.position="bottom") +
              scale_colour_discrete("Spectrum") +
              scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), limits=c(max(data[,2]), min(data[,2])), breaks=seq(0, 4000, 250)) +
-             scale_y_continuous("Intensity") +
+             scale_y_continuous("Amplitude") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
-             geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3) +
+             geom_point(data=peakTable(), aes(Wavelength, Amplitude), shape=1, size=3) +
              theme(axis.text.x = element_text(size=15)) +
              theme(axis.text.y = element_text(size=15)) +
              theme(axis.title.x = element_text(size=15)) +
@@ -541,13 +551,13 @@ shinyServer(function(input, output, session) {
              theme(legend.text=element_text(size=15))
              
              combine <- ggplot(data) +
-             geom_line(aes(Wavelength, Intensity)) +
+             geom_line(aes(Wavelength, Amplitude)) +
              theme_light()+
              theme(legend.position="bottom") +
              scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), breaks=seq(0, 4000, 250)) +
-             scale_y_continuous("Intensity") +
+             scale_y_continuous("Amplitude") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
-             geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3) +
+             geom_point(data=peakTable(), aes(Wavelength, Amplitude), shape=1, size=3) +
              theme(axis.text.x = element_text(size=15)) +
              theme(axis.text.y = element_text(size=15)) +
              theme(axis.title.x = element_text(size=15)) +
@@ -557,14 +567,14 @@ shinyServer(function(input, output, session) {
              theme(legend.text=element_text(size=15))
              
              normal.invert <- ggplot(data) +
-             geom_line(aes(Wavelength, Intensity, colour=Spectrum)) +
+             geom_line(aes(Wavelength, Amplitude, colour=Spectrum)) +
              theme_light()+
              theme(legend.position="bottom") +
              scale_colour_discrete("Spectrum") +
              scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), breaks=seq(0, 4000, 250)) +
-             scale_y_reverse("Intensity") +
+             scale_y_reverse("Amplitude") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
-             geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3) +
+             geom_point(data=peakTable(), aes(Wavelength, Amplitude), shape=1, size=3) +
              theme(axis.text.x = element_text(size=15)) +
              theme(axis.text.y = element_text(size=15)) +
              theme(axis.title.x = element_text(size=15)) +
@@ -574,13 +584,13 @@ shinyServer(function(input, output, session) {
              theme(legend.text=element_text(size=15))
              
              combine.invert <- ggplot(data) +
-             geom_line(aes(Wavelength, Intensity)) +
+             geom_line(aes(Wavelength, Amplitude)) +
              theme_light()+
              theme(legend.position="bottom") +
              scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), breaks=seq(0, 4000, 250)) +
-             scale_y_reverse("Intensity") +
+             scale_y_reverse("Amplitude") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
-             geom_point(data=peakTable(), aes(Wavelength, Intensity), shape=1, size=3) +
+             geom_point(data=peakTable(), aes(Wavelength, Amplitude), shape=1, size=3) +
              theme(axis.text.x = element_text(size=15)) +
              theme(axis.text.y = element_text(size=15)) +
              theme(axis.title.x = element_text(size=15)) +
@@ -658,7 +668,7 @@ shinyServer(function(input, output, session) {
             style = style,
             p(HTML(paste0("Spectrum:", " ", point$Spectrum))),
             p(HTML(paste0("Wavelength:", " ", round(point$Wavelength, 0)))),
-            p(HTML(paste0("Intensity:", " ", round(point$Intensity, 2))))
+            p(HTML(paste0("Amplitude:", " ", round(point$Amplitude, 2))))
             )
         })
         
@@ -691,7 +701,9 @@ shinyServer(function(input, output, session) {
             
             temprows <- xor(unlist(peaks$findpeaks), res$selected_)
             
-            peaks$findpeaks <- relist(flesh=temprows, skeleton=peaks$findpeaks)        })
+            peaks$findpeaks <- relist(flesh=temprows, skeleton=peaks$findpeaks)
+            
+        })
         
         
         
@@ -703,36 +715,25 @@ shinyServer(function(input, output, session) {
             peaks$findpeaks <- findPeaks()
         })
         
-         })
     
     
     
     waveInput <- reactive({
         
         blank.frame <- data.frame(
-        Name=rep("", 25),
-        WaveMin=rep("", 25),
-        WaveMax=rep("", 25)
+        Name=as.vector(as.character(rep("", 25))),
+        WaveMin=as.numeric(rep("", 25)),
+        WaveMax=as.numeric(rep("", 25)),
+        stringsAsFactors = FALSE
         )
         
-        blank.frame$Name <- as.character(blank.frame$Name)
-        blank.frame$WaveMin <- as.numeric(blank.frame$WaveMin)
-        blank.frame$WaveMax <- as.numeric(blank.frame$WaveMax)
-        
         blank.frame
-
         
     })
     
     
     
     wavevalues <- reactiveValues()
-    
-    
-    
-    
-
-    
     
 
     
@@ -803,9 +804,9 @@ shinyServer(function(input, output, session) {
         #    waveInputCal()
         #}
         
-        waveInput()
-        
-        
+        result <- waveInput()
+        result
+
     })
     
     
@@ -821,10 +822,7 @@ shinyServer(function(input, output, session) {
         if (!is.null(input$hotwave)) {
             DF <- hot_to_r(input$hotwave)
         } else {
-            if (input$linecommitwave)
             DF <- waveTableInput()
-            else
-            DF <- wavevalues[["DF"]]
         }
         wavevalues[["DF"]] <- DF
     })
@@ -845,12 +843,10 @@ shinyServer(function(input, output, session) {
         
         DF <- wavevalues[["DF"]]
         
-        DF <- DF[order(as.character(DF$Name)),]
         
         
         
-        if (!is.null(DF))
-        rhandsontable(DF) %>% hot_col(2:length(DF), renderer=htmlwidgets::JS("safeHtmlRenderer"))
+        rhandsontable(DF) %>% hot_col(1:length(DF), renderer=htmlwidgets::JS("safeHtmlRenderer"))
         
         
     })
@@ -891,6 +887,220 @@ shinyServer(function(input, output, session) {
     #output$nullintercept <- randomInterList()
     
     #output$nullslope <- randomSlopeList()
+    
+    waveSubset <- reactive({
+        
+        spectra.data <- dataManipulate()
+        choice.lines <- wavevalues[["DF"]]
+        choice.lines <- choice.lines[complete.cases(choice.lines),]
+        
+        choice.list <- split(choice.lines, f=choice.lines$Name)
+        names(choice.list) <- choice.lines[,"Name"]
+        
+        index <- choice.lines[,"Name"]
+        
+        range_subset <- function(range.frame, data){
+            
+            new.data <- subset(data, Wavelength >= range.frame$WaveMin & Wavelength <= range.frame$WaveMax, drop=TRUE)
+            newer.data <- aggregate(new.data, by=list(new.data$Spectrum), FUN=mean, na.rm=TRUE)[,c("Group.1", "Amplitude")]
+            colnames(newer.data) <- c("Spectrum", as.character(range.frame$Name))
+            newer.data
+        }
+            
+            selected.list <- lapply(index, function(x) range_subset(range.frame=choice.list[[x]], data=spectra.data))
+            
+            Reduce(function(...) merge(..., all=T), selected.list)
+
+    })
+    
+    
+    output$LineValues <- renderDataTable({
+        waveSubset()
+    })
+    
+    
+    
+    hotableInputBlank <- reactive({
+
+        
+        spectra.line.table <- waveSubset()
+      
+        empty <- spectra.line.table[,-1] * 0.0000
+        empty.line.table <- data.frame(Spectrum=spectra.line.table$Spectrum, empty)
+
+        empty.line.table
+        
+        
+    })
+    
+    output$testtable <- renderDataTable({
+        hotableInputBlank()
+    })
+    
+    hotableInputCal <- reactive({
+        
+        lines <- elementallinestouse()
+        
+        
+        
+        
+        spectra.line.table <- if(input$filetype=="Spectra"){
+            spectraData()
+        } else if(input$filetype=="Elio"){
+            spectraData()
+        }  else if(input$filetype=="MCA"){
+            spectraData()
+        }  else if(input$filetype=="SPX"){
+            spectraData()
+        }  else if(input$filetype=="PDZ"){
+            spectraData()
+        } else if(input$filetype=="Net"){
+            dataHold()
+        }
+        
+        empty.line.table <- spectra.line.table[,elements] * 0.0000
+        
+        #empty.line.table$Spectrum <- spectra.line.table$Spectrum
+        
+        hold.frame <- data.frame(spectra.line.table$Spectrum, empty.line.table)
+        colnames(hold.frame) <- c("Spectrum", elements)
+        
+        hold.frame <- as.data.frame(hold.frame)
+        
+        
+        value.frame <- calFileContents()$Values
+        
+        #anna <- rbind(hold.frame, value.frame)
+        
+        #temp.table <- data.table(anna)[,list(result = sum(result)), elements]
+        
+        #as.data.frame(temp.table)
+        
+        #element.matches <- elements[elements %in% ls(value.frame)]
+        
+        #merge_Sum(.df1=hold.frame, .df2=value.frame, .id_Columns="Spectrum",  .match_Columns=element.matches)
+        
+        
+        #data.frame(calFileContents()$Values, hold.frame[,! names(hold.frame) %in% names(calFileContents()$Values)])
+        
+        hold.frame.reduced <- hold.frame[2:length(hold.frame)]
+        value.frame.reduced <- if(colnames(calFileContents()$Values)[1]=="Spectrum"){
+            value.frame[2:length(value.frame)]
+        }else if(colnames(calFileContents()$Values)[1]=="Include"){
+            value.frame[3:length(value.frame)]
+        }
+        
+        rownames(hold.frame.reduced) <- hold.frame$Spectrum
+        rownames(value.frame.reduced) <- value.frame$Spectrum
+        
+        
+        hotable.new = hold.frame.reduced %>% add_rownames %>%
+        full_join(value.frame.reduced %>% add_rownames) %>%
+        group_by(rowname) %>%
+        summarise_all(funs(sum(., na.rm = FALSE)))
+        
+        colnames(hotable.new)[1] <- "Spectrum"
+        
+        hotable.new$Spectrum <- gsub(".pdz", "", hotable.new$Spectrum)
+        hotable.new$Spectrum <- gsub(".csv", "", hotable.new$Spectrum)
+        hotable.new$Spectrum <- gsub(".CSV", "", hotable.new$Spectrum)
+        hotable.new$Spectrum <- gsub(".spt", "", hotable.new$Spectrum)
+        hotable.new$Spectrum <- gsub(".mca", "", hotable.new$Spectrum)
+        hotable.new$Spectrum <- gsub(".spx", "", hotable.new$Spectrum)
+        
+        hotable.new
+        
+        
+    })
+    
+    hotableInput <- reactive({
+        
+        
+        hotable.data <- if(input$usecalfile==FALSE){
+            hotableInputBlank()
+        }else if(input$usecalfile==TRUE){
+            hotableInputCal()
+        }
+        
+        
+        
+        hotable.new <- if(input$usecalfile==FALSE){
+            data.frame(Include=rep(TRUE, length(hotable.data$Spectrum)), hotable.data)
+        }else if(input$usecalfile==TRUE && colnames(calFileContents()$Values)[1]=="Spectrum"){
+            data.frame(Include=rep(TRUE, length(hotable.data$Spectrum)), hotable.data)
+        }else if(input$usecalfile==TRUE && colnames(calFileContents()$Values)[1]=="Include"){
+            data.frame(Include=calFileContents()$Values[,1], hotable.data)
+        }
+        
+        
+        
+    })
+    
+    
+    
+    
+    
+    values <- reactiveValues()
+    
+    
+    
+    
+    
+    observe({
+        if (!is.null(input$hot)) {
+            DF <- hot_to_r(input$hot)
+        } else {
+            if (input$linecommitwave)
+            DF <- hotableInput()
+            else
+            DF <- values[["DF"]]
+        }
+        values[["DF"]] <- DF
+    })
+    
+    eventReactive(input$linecommit,{
+        
+        values[["DF"]] <- hotableInput()
+        
+    })
+    
+    
+    ## Handsontable
+    
+    output$hot <- renderRHandsontable({
+        
+        DF <- values[["DF"]]
+        
+        DF <- DF[order(as.character(DF$Spectrum)),]
+        
+        
+        
+        if (!is.null(DF))
+        rhandsontable(DF) %>% hot_col(2:length(DF), renderer=htmlwidgets::JS("safeHtmlRenderer"))
+        
+        
+    })
+    
+    
+    observeEvent(input$resethotable, {
+        
+        values[["DF"]] <- NULL
+        
+        values[["DF"]] <- hotableInput()
+        
+        
+    })
+    
+    output$covarianceplotvalues <- renderPlot({
+        
+        data.table <- values[["DF"]]
+        correlations <- cor(data.table[,3:length(data.table)], use="pairwise.complete.obs")
+        corrplot(correlations, method="circle")
+        
+    })
+    
+    
+    })
 
          
          

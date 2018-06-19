@@ -45,7 +45,7 @@ downloadButton('downloadPlot', "Plot"),
 downloadButton('downloadPeakTableID', "Peak ID"),
 downloadButton('downloadPeakTableSummary', "Summary"),
 downloadButton('downloadsummaryplot', "Summary Plot"),
-downloadButton('downloadPeakTable', "Raw"),
+downloadButton('downloadData', "Raw"),
 #downloadButton('downloadfp', "FP"),
 
 
@@ -77,7 +77,12 @@ tags$hr(),
 
 uiOutput('filegrab'),
 
-selectInput('filetype', label="Filetype", c("DPT", "CSV", "Opus"), selected="DPT")
+selectInput('filetype', label="Filetype", c("DPT", "CSV", "Opus"), selected="DPT"),
+
+tags$hr(),
+
+fileInput('calfileinput', 'Load Cal File', accept=".quant", multiple=FALSE),
+checkboxInput('usecalfile', "Use Cal File")
 ),
 
 
@@ -136,6 +141,8 @@ actionButton('linecommitwave', "Add Wavenumbers")
 mainPanel(
 tabsetPanel(
 tabPanel('Enter Concentrations', rHandsontableOutput('hotwave')),
+tabPanel('Line Counts', dataTableOutput('LineValues')),
+tabPanel('empty', dataTableOutput('testtable')),
 tabPanel('Covariance', plotOutput('covarianceplotvalueswave'))
 ))
 ))
@@ -160,7 +167,27 @@ textInput("calunits", label = "Units", value="Weight %")
 mainPanel(
 tabsetPanel(
 id = 'dataset',
-tabPanel('Enter Concentrations', rHandsontableOutput('hot')),
+tabPanel('Enter Concentrations', rHandsontableOutput('hot'),
+tags$script(
+'
+setTimeout(
+function() {
+    HTMLWidgets.find("#hot").hot.addHook(
+    "afterColumnSort",
+    function(){
+        console.log("sort",this);
+        Shiny.onInputChange(
+        "hot_sort",
+        {
+            data: this.getData()
+        }
+        )
+    }
+    )
+},
+1000
+)'
+)),
 tabPanel('Covariance', plotOutput('covarianceplotvalues'))
 
 ))
