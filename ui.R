@@ -142,7 +142,6 @@ mainPanel(
 tabsetPanel(
 tabPanel('Enter Concentrations', rHandsontableOutput('hotwave')),
 tabPanel('Line Counts', dataTableOutput('LineValues')),
-tabPanel('empty', dataTableOutput('testtable')),
 tabPanel('Covariance', plotOutput('covarianceplotvalueswave'))
 ))
 ))

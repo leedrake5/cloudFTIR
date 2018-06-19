@@ -1135,6 +1135,9 @@ shinyServer(function(input, output, session) {
     })
     
     
+    
+    
+    
     outVar <- reactive({
         input$hotableprocess2
         
@@ -1241,6 +1244,37 @@ shinyServer(function(input, output, session) {
     dataNorm <- reactive({
         
         dataManipulate()
+        
+    })
+    
+    
+    #####Set Defaults
+    
+    
+    calConditons <- reactiveValues()
+    calList <- reactiveValues()
+    calList <- NULL
+    
+    observeEvent(input$hotableprocess2, {
+        
+        cal.condition <- 3
+        norm.condition <- 1
+        
+        norm.min <- 2000
+        norm.max <- 2250
+        
+        cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max)
+        colnames(cal.table) <- c("CalType", "NormType", "Min", "Max")
+        
+        slope.corrections <- NULL
+        intercept.corrections <- NULL
+        
+        standards.used <- vals$keeprows
+        
+        cal.mode.list <- list(cal.table, slope.corrections, intercept.corrections, standards.used)
+        names(cal.mode.list) <- c("CalTable", "Slope", "Intercept", "StandardsUsed")
+        
+        calConditons <<- cal.mode.list
         
     })
     
@@ -1893,36 +1927,7 @@ shinyServer(function(input, output, session) {
     
     
     
-    
-    #####Set Defaults
-    
-    
-    calConditons <- reactiveValues()
-    calList <- reactiveValues()
-    calList <- NULL
-    
-    observeEvent(input$hotableprocess2, {
-        
-        cal.condition <- 3
-        norm.condition <- 1
-        
-        norm.min <- 2000
-        norm.max <- 2250
-        
-        cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max)
-        colnames(cal.table) <- c("CalType", "NormType", "Min", "Max")
-        
-        slope.corrections <- input$slope_vars
-        intercept.corrections <- input$intercept_vars
-        
-        standards.used <- vals$keeprows
-        
-        cal.mode.list <- list(cal.table, slope.corrections, intercept.corrections, standards.used)
-        names(cal.mode.list) <- c("CalTable", "Slope", "Intercept", "StandardsUsed")
-        
-        calConditons <<- cal.mode.list
-        
-    })
+
     
     
     
@@ -3890,7 +3895,7 @@ shinyServer(function(input, output, session) {
     
     calList <- reactiveValues()
     
-    observeEvent(input$actionprocess, {
+    observeEvent(!is.null(input$file1), {
         isolate(calList <- emptyList())
         calList <<- calList
     })
@@ -3903,8 +3908,8 @@ shinyServer(function(input, output, session) {
         cal.condition <- input$radiocal
         norm.condition <- input$normcal
         
-        norm.min <- print(input$comptonmin)
-        norm.max <- print(input$comptonmax)
+        norm.min <- input$comptonmin
+        norm.max <- input$comptonmax
         
         cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max)
         colnames(cal.table) <- c("CalType", "NormType", "Min", "Max")
@@ -3922,15 +3927,15 @@ shinyServer(function(input, output, session) {
     })
     
     
-    calList <- reactiveValues()
     observeEvent(input$createcalelement, {
-        
         
         calList[[input$calcurveline]] <- list(isolate(calConditons), isolate(strip_glm(lineModel())))
         
         calList <<- calList
         
     })
+    
+    
     
     calPlotList <- reactiveValues()
     calPlotList <- emptyList()
@@ -3966,13 +3971,11 @@ shinyServer(function(input, output, session) {
         cal.intensities <- spectra.line.table
         cal.values <- values[["DF"]]
         cal.data <- if(dataType()=="Spectra"){
-            dataHold()
+            dataManipulate()
         } else if(dataType()=="Net"){
-            myData()
+            dataManipulate()
         }
         
-        
-        dataHold()
         
         calibrationList <- NULL
         calibrationList <- list(input$filetype, input$calunits, cal.data, cal.intensities, cal.values, calList)
@@ -4002,7 +4005,7 @@ shinyServer(function(input, output, session) {
     
     output$downloadModel <- downloadHandler(
     filename <- function(){
-        paste(input$calname, "quant", sep=".")
+        paste(input$projectname, "quant", sep=".")
     },
     
     content = function(file) {
@@ -4012,7 +4015,7 @@ shinyServer(function(input, output, session) {
     
     
     output$downloadReport <- downloadHandler(
-    function() { paste(paste(c(input$calname), collapse=''), '.pdf',  sep='') },
+    function() { paste(paste(c(input$projectname), collapse=''), '.pdf',  sep='') },
     content = function(file){
         ml = marrangeGrob(grobs=CalibrationPlots$calCurves, nrow=1, ncol=1)
         ggsave(file, ml, device="pdf", dpi=300, width=12, height=7)
