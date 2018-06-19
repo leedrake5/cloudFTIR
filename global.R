@@ -76,8 +76,8 @@ read_csv_filename_x <- function(filename){
     ret <- read.csv(file=filename, sep=",", header=FALSE)
     return.res <- as.numeric(as.vector(ret$V2[18]))/1000
     return.chan.counts <-as.numeric(as.vector(ret$V1[22:2069]))
-    return.energy <- return.chan.counts*return.res
-    return(return.energy)
+    return.Wavenumber <- return.chan.counts*return.res
+    return(return.Wavenumber)
 }
 
 read_csv_filename_y <- function(filename){
@@ -117,7 +117,7 @@ readDPTData <- function(filepath, filename){
     
     file.frame <- data.frame(
     Spectrum=rep(filename, length(file[,1])),
-    Wavelength=file[,1],
+    Wavenumber=file[,1],
     Amplitude=file[,2]
     )
     
@@ -133,7 +133,7 @@ readCSVData <- function(filepath, filename){
     
     file.frame <- data.frame(
     Spectrum=rep(filename, length(file[,1])),
-    Wavelength=file[,1],
+    Wavenumber=file[,1],
     Amplitude=file[,2]
     )
     
@@ -151,7 +151,7 @@ readOpusData <- function(filepath, filename){
     
     file.frame <- data.frame(
     Spectrum=rep(filename, length(thedata[,1])-1),
-    Wavelength=as.numeric(as.vector(substring(rownames(thedata), 2)[2:length(thedata[,1])])),
+    Wavenumber=as.numeric(as.vector(substring(rownames(thedata), 2)[2:length(thedata[,1])])),
     Amplitude=as.numeric(as.vector(thedata[,1][2:length(thedata[,1])]))
     )
     
@@ -478,18 +478,18 @@ linear.simp <- function(concentration.table, spectra.line.table, element.line) {
     concentration <- na.omit(as.vector(as.numeric(unlist(concentration.table[element.line]))))
     
     
-    intensity <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
+    Amplitude <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
     
     
-    predict.frame <- data.frame(concentration, intensity)
-    colnames(predict.frame) <- c("Concentration", "Intensity")
+    predict.frame <- data.frame(concentration, Amplitude)
+    colnames(predict.frame) <- c("Concentration", "Amplitude")
     
     
     
-    predict.intensity <- data.frame(predict.frame$Intensity)
-    colnames(predict.intensity) <- c("Intensity")
+    predict.amplitude <- data.frame(predict.frame$Amplitude)
+    colnames(predict.amplitude) <- c("Amplitude")
     
-    cal.lm <- lm(predict.frame$Concentration~predict.frame$Intensity)
+    cal.lm <- lm(predict.frame$Concentration~predict.frame$Amplitude)
     
     cal.lm
     
@@ -502,18 +502,18 @@ poly.simp <- function(concentration.table, spectra.line.table, element.line) {
     concentration <- na.omit(as.vector(as.numeric(unlist(concentration.table[element.line]))))
     
     
-    intensity <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
+    Amplitude <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
     
     
-    predict.frame <- data.frame(concentration, intensity)
-    colnames(predict.frame) <- c("Concentration", "Intensity")
+    predict.frame <- data.frame(concentration, Amplitude)
+    colnames(predict.frame) <- c("Concentration", "Amplitude")
     
     
     
-    predict.intensity <- data.frame(predict.frame$Intensity)
-    colnames(predict.intensity) <- c("Intensity")
+    predict.amplitude <- data.frame(predict.frame$Amplitude)
+    colnames(predict.amplitude) <- c("Amplitude")
     
-    cal.lm.poly <- lm(predict.frame$Concentration~poly(predict.frame$Intensity, 2))
+    cal.lm.poly <- lm(predict.frame$Concentration~poly(predict.frame$Amplitude, 2))
     
     cal.lm.poly
     
@@ -525,7 +525,7 @@ lucas.simp <- function(concentration.table, spectra.line.table, element.line, sl
     concentration <- na.omit(as.vector(as.numeric(unlist(concentration.table[element.line]))))
     
     
-    intensity <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
+    Amplitude <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
     
     lucas.intercept.table <- data.frame(rowSums(lucas.intercept.table.x[intercept.element.lines]))
     colnames(lucas.intercept.table) <- c("first")
@@ -537,13 +537,13 @@ lucas.simp <- function(concentration.table, spectra.line.table, element.line, sl
     
     
     
-    predict.frame.luk <- data.frame(concentration, ((1+intensity/(intensity+lucas.intercept))-lucas.intercept/(intensity+lucas.intercept)),lucas.slope)
-    colnames(predict.frame.luk) <- c("Concentration", "Intensity", names(lucas.slope))
+    predict.frame.luk <- data.frame(concentration, ((1+Amplitude/(Amplitude+lucas.intercept))-lucas.intercept/(Amplitude+lucas.intercept)),lucas.slope)
+    colnames(predict.frame.luk) <- c("Concentration", "Amplitude", names(lucas.slope))
     
     
     
-    predict.intensity.luk <- data.frame(predict.frame.luk$Intensity, lucas.slope)
-    colnames(predict.intensity.luk) <- c("Intensity", names(lucas.slope))
+    predict.amplitude.luk <- data.frame(predict.frame.luk$Amplitude, lucas.slope)
+    colnames(predict.amplitude.luk) <- c("Amplitude", names(lucas.slope))
     
     lucas.lm <- lm(Concentration~., data=predict.frame.luk)
     
@@ -560,7 +560,7 @@ linear.tc <- function(concentration.table, spectra.line.table, element.line) {
     concentration <- na.omit(as.vector(as.numeric(unlist(concentration.table[element.line]))))
     
     
-    intensity <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
+    Amplitude <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
     
     
     total.counts <- aggregate(CPS~Spectrum, data=data, sum)
@@ -568,15 +568,15 @@ linear.tc <- function(concentration.table, spectra.line.table, element.line) {
     
     
     
-    predict.frame.tc <- data.frame(concentration, intensity/total.counts$CPS)
-    colnames(predict.frame.tc) <- c("Concentration", "Intensity")
+    predict.frame.tc <- data.frame(concentration, Amplitude/total.counts$CPS)
+    colnames(predict.frame.tc) <- c("Concentration", "Amplitude")
     
     
     
-    predict.intensity.tc <- data.frame(predict.frame.tc$Intensity)
-    colnames(predict.intensity.tc) <- c("Intensity")
+    predict.amplitude.tc <- data.frame(predict.frame.tc$Amplitude)
+    colnames(predict.amplitude.tc) <- c("Amplitude")
     
-    cal.lm.tc <- lm(predict.frame.tc$Concentration~predict.frame.tc$Intensity)
+    cal.lm.tc <- lm(predict.frame.tc$Concentration~predict.frame.tc$Amplitude)
     
     cal.lm.tc
     
@@ -589,7 +589,7 @@ poly.tc <- function(concentration.table, spectra.line.table, element.line) {
     concentration <- na.omit(as.vector(as.numeric(unlist(concentration.table[element.line]))))
     
     
-    intensity <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
+    Amplitude <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
     
     
     
@@ -599,15 +599,15 @@ poly.tc <- function(concentration.table, spectra.line.table, element.line) {
     
     
     
-    predict.frame.tc <- data.frame(concentration, intensity/total.counts$CPS)
-    colnames(predict.frame.tc) <- c("Concentration", "Intensity")
+    predict.frame.tc <- data.frame(concentration, Amplitude/total.counts$CPS)
+    colnames(predict.frame.tc) <- c("Concentration", "Amplitude")
     
     
     
-    predict.intensity.tc <- data.frame(predict.frame.tc$Intensity)
-    colnames(predict.intensity.tc) <- c("Intensity")
+    predict.amplitude.tc <- data.frame(predict.frame.tc$Amplitude)
+    colnames(predict.amplitude.tc) <- c("Amplitude")
     
-    cal.lm.poly.tc <- lm(predict.frame.tc$Concentration~poly(predict.frame.tc$Intensity, 2))
+    cal.lm.poly.tc <- lm(predict.frame.tc$Concentration~poly(predict.frame.tc$Amplitude, 2))
     
     cal.lm.poly.tc
     
@@ -624,7 +624,7 @@ lucas.tc <- function(concentration.table, spectra.line.table, element.line, slop
     concentration <- na.omit(as.vector(as.numeric(unlist(concentration.table[element.line]))))
     
     
-    intensity <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
+    Amplitude <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
     
     lucas.intercept.table.tc <- data.frame(rowSums(lucas.intercept.table.x[intercept.element.lines]))/total.counts$CPS
     colnames(lucas.intercept.table.tc) <- c("first")
@@ -636,13 +636,13 @@ lucas.tc <- function(concentration.table, spectra.line.table, element.line, slop
     
     
     
-    predict.frame.luc.tc <- data.frame(concentration, ((intensity/total.counts$CPS-lucas.intercept.tc)/(intensity/total.counts$CPS+lucas.intercept.tc)),lucas.slope.tc)
-    colnames(predict.frame.luc.tc) <- c("Concentration", "Intensity", names(lucas.slope.tc))
+    predict.frame.luc.tc <- data.frame(concentration, ((Amplitude/total.counts$CPS-lucas.intercept.tc)/(Amplitude/total.counts$CPS+lucas.intercept.tc)),lucas.slope.tc)
+    colnames(predict.frame.luc.tc) <- c("Concentration", "Amplitude", names(lucas.slope.tc))
     
     
     
-    predict.intensity.luc.tc <- data.frame(predict.frame.luc.tc$Intensity, lucas.slope.tc)
-    colnames(predict.intensity.luc.tc) <- c("Intensity", names(lucas.slope.tc))
+    predict.amplitude.luc.tc <- data.frame(predict.frame.luc.tc$Amplitude, lucas.slope.tc)
+    colnames(predict.amplitude.luc.tc) <- c("Amplitude", names(lucas.slope.tc))
     
     lucas.lm.tc <- lm(Concentration~., data=predict.frame.luc.tc)
     
@@ -658,25 +658,25 @@ linear.comp <- function(data, concentration.table, spectra.line.table, element.l
     concentration <- na.omit(as.vector(as.numeric(unlist(concentration.table[element.line]))))
     
     
-    intensity <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
+    Amplitude <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
     
     
-    compton.norm <- subset(data$CPS, !(data$Energy < input$comptonmin | data$Energy > input$comptonmax))
-    compton.file <- subset(data$Spectrum, !(data$Energy < input$comptonmin | data$Energy > input$comptonmax))
+    compton.norm <- subset(data$CPS, !(data$Wavenumber < input$comptonmin | data$Wavenumber > input$comptonmax))
+    compton.file <- subset(data$Spectrum, !(data$Wavenumber < input$comptonmin | data$Wavenumber > input$comptonmax))
     compton.frame <- data.frame(is.0(compton.norm, compton.file))
     colnames(compton.frame) <- c("Compton", "Spectrum")
     compton.frame.ag <- aggregate(list(compton.frame$Compton), by=list(compton.frame$Spectrum), FUN="sum")
     colnames(compton.frame.ag) <- c("Spectrum", "Compton")
     
-    predict.frame.comp <- data.frame(concentration, intensity/compton.frame.ag$Compton)
-    colnames(predict.frame.comp) <- c("Concentration", "Intensity")
+    predict.frame.comp <- data.frame(concentration, Amplitude/compton.frame.ag$Compton)
+    colnames(predict.frame.comp) <- c("Concentration", "Amplitude")
     
     
     
-    predict.intensity.comp <- data.frame(predict.frame.comp$Intensity)
-    colnames(predict.intensity.comp) <- c("Intensity")
+    predict.amplitude.comp <- data.frame(predict.frame.comp$Amplitude)
+    colnames(predict.amplitude.comp) <- c("Amplitude")
     
-    cal.lm.comp <- lm(predict.frame.comp$Concentration~predict.frame.comp$Intensity)
+    cal.lm.comp <- lm(predict.frame.comp$Concentration~predict.frame.comp$Amplitude)
     
     cal.lm.comp
     
@@ -689,25 +689,25 @@ poly.comp <- function(data, concentration.table, spectra.line.table, element.lin
     concentration <- na.omit(as.vector(as.numeric(unlist(concentration.table[element.line]))))
     
     
-    intensity <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
+    Amplitude <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
     
     
-    compton.norm <- subset(data$CPS, !(data$Energy < input$comptonmin | data$Energy > input$comptonmax))
-    compton.file <- subset(data$Spectrum, !(data$Energy < input$comptonmin | data$Energy > input$comptonmax))
+    compton.norm <- subset(data$CPS, !(data$Wavenumber < input$comptonmin | data$Wavenumber > input$comptonmax))
+    compton.file <- subset(data$Spectrum, !(data$Wavenumber < input$comptonmin | data$Wavenumber > input$comptonmax))
     compton.frame <- data.frame(is.0(compton.norm, compton.file))
     colnames(compton.frame) <- c("Compton", "Spectrum")
     compton.frame.ag <- aggregate(list(compton.frame$Compton), by=list(compton.frame$Spectrum), FUN="sum")
     colnames(compton.frame.ag) <- c("Spectrum", "Compton")
     
-    predict.frame.comp <- data.frame(concentration, intensity/compton.frame.ag$Compton)
-    colnames(predict.frame.comp) <- c("Concentration", "Intensity")
+    predict.frame.comp <- data.frame(concentration, Amplitude/compton.frame.ag$Compton)
+    colnames(predict.frame.comp) <- c("Concentration", "Amplitude")
     
     
     
-    predict.intensity.comp <- data.frame(predict.frame.comp$Intensity)
-    colnames(predict.intensity.comp) <- c("Intensity")
+    predict.amplitude.comp <- data.frame(predict.frame.comp$Amplitude)
+    colnames(predict.amplitude.comp) <- c("Amplitude")
     
-    cal.lm.poly.comp <- lm(predict.frame.comp$Concentration~poly(predict.frame.comp$Intensity, 2))
+    cal.lm.poly.comp <- lm(predict.frame.comp$Concentration~poly(predict.frame.comp$Amplitude, 2))
     
     cal.lm.poly.comp
     
@@ -719,11 +719,11 @@ lucas.comp <- function(data, concentration.table, spectra.line.table, element.li
     concentration <- na.omit(as.vector(as.numeric(unlist(concentration.table[element.line]))))
     
     
-    intensity <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
+    Amplitude <- na.omit(as.vector(as.numeric(unlist(spectra.line.table[element.line]))))
     
     
-    compton.norm <- subset(data$CPS, !(data$Energy < input$comptonmin | data$Energy > input$comptonmax))
-    compton.file <- subset(data$Spectrum, !(data$Energy < input$comptonmin | data$Energy > input$comptonmax))
+    compton.norm <- subset(data$CPS, !(data$Wavenumber < input$comptonmin | data$Wavenumber > input$comptonmax))
+    compton.file <- subset(data$Spectrum, !(data$Wavenumber < input$comptonmin | data$Wavenumber > input$comptonmax))
     compton.frame <- data.frame(is.0(compton.norm, compton.file))
     colnames(compton.frame) <- c("Compton", "Spectrum")
     compton.frame.ag <- aggregate(list(compton.frame$Compton), by=list(compton.frame$Spectrum), FUN="sum")
@@ -742,13 +742,13 @@ lucas.comp <- function(data, concentration.table, spectra.line.table, element.li
     
     
     
-    predict.frame.luc.comp <- data.frame(concentration, ((1+intensity/compton.frame.ag$Compton)/(intensity/compton.frame.ag$Compton+lucas.intercept.comp)-lucas.intercept.comp/(intensity/compton.frame.ag$Compton+lucas.intercept.comp)),lucas.slope.comp)
-    colnames(predict.frame.luc.comp) <- c("Concentration", "Intensity", names(lucas.slope.comp))
+    predict.frame.luc.comp <- data.frame(concentration, ((1+Amplitude/compton.frame.ag$Compton)/(Amplitude/compton.frame.ag$Compton+lucas.intercept.comp)-lucas.intercept.comp/(Amplitude/compton.frame.ag$Compton+lucas.intercept.comp)),lucas.slope.comp)
+    colnames(predict.frame.luc.comp) <- c("Concentration", "Amplitude", names(lucas.slope.comp))
     
     
     
-    predict.intensity.luc.comp <- data.frame(predict.frame.luc.comp$Intensity, lucas.slope.comp)
-    colnames(predict.intensity.luc.comp) <- c("Intensity", names(lucas.slope.comp))
+    predict.amplitude.luc.comp <- data.frame(predict.frame.luc.comp$Amplitude, lucas.slope.comp)
+    colnames(predict.amplitude.luc.comp) <- c("Amplitude", names(lucas.slope.comp))
     
     lucas.lm.comp <- lm(Concentration~., data=predict.frame.luc.comp)
     
@@ -770,16 +770,16 @@ lucas.comp <- function(data, concentration.table, spectra.line.table, element.li
 
 general.prep <- function(spectra.line.table, element.line) {
     
-    intensity <- spectra.line.table[,element.line]
+    Amplitude <- spectra.line.table[,element.line]
     
     
-    data.frame(Intensity=spectra.line.table[,element.line])
+    data.frame(Amplitude=spectra.line.table[,element.line])
 
 }
 
 simple.tc.prep <- function(data,spectra.line.table, element.line) {
     
-    intensity <- spectra.line.table[,element.line]
+    Amplitude <- spectra.line.table[,element.line]
     
     
     total.counts <- aggregate(CPS~Spectrum, data=data, sum)
@@ -787,15 +787,15 @@ simple.tc.prep <- function(data,spectra.line.table, element.line) {
     
     
     
-    predict.frame.tc <- data.frame(intensity/total.counts$CPS)
-    colnames(predict.frame.tc) <- c("Intensity")
+    predict.frame.tc <- data.frame(Amplitude/total.counts$CPS)
+    colnames(predict.frame.tc) <- c("Amplitude")
     
     
     
-    predict.intensity.tc <- data.frame(predict.frame.tc$Intensity)
-    colnames(predict.intensity.tc) <- c("Intensity")
+    predict.amplitude.tc <- data.frame(predict.frame.tc$Amplitude)
+    colnames(predict.amplitude.tc) <- c("Amplitude")
     
-    predict.intensity.tc
+    predict.amplitude.tc
 }
 
 
@@ -803,25 +803,25 @@ simple.comp.prep <- function(data, spectra.line.table, element.line, norm.min, n
     
     
     
-    intensity <- spectra.line.table[,element.line]
+    Amplitude <- spectra.line.table[,element.line]
     
     
-    compton.norm <- subset(data$CPS, !(data$Energy < norm.min | data$Energy > norm.max))
-    compton.file <- subset(data$Spectrum, !(data$Energy < norm.min | data$Energy > norm.max))
+    compton.norm <- subset(data$CPS, !(data$Wavenumber < norm.min | data$Wavenumber > norm.max))
+    compton.file <- subset(data$Spectrum, !(data$Wavenumber < norm.min | data$Wavenumber > norm.max))
     compton.frame <- data.frame(is.0(compton.norm, compton.file))
     colnames(compton.frame) <- c("Compton", "Spectrum")
     compton.frame.ag <- aggregate(list(compton.frame$Compton), by=list(compton.frame$Spectrum), FUN="sum")
     colnames(compton.frame.ag) <- c("Spectrum", "Compton")
     
-    predict.frame.comp <- data.frame( intensity/compton.frame.ag$Compton)
-    colnames(predict.frame.comp) <- c("Intensity")
+    predict.frame.comp <- data.frame( Amplitude/compton.frame.ag$Compton)
+    colnames(predict.frame.comp) <- c("Amplitude")
     
     
     
-    predict.intensity.comp <- data.frame(predict.frame.comp$Intensity)
-    colnames(predict.intensity.comp) <- c("Intensity")
+    predict.amplitude.comp <- data.frame(predict.frame.comp$Amplitude)
+    colnames(predict.amplitude.comp) <- c("Amplitude")
     
-    predict.intensity.comp
+    predict.amplitude.comp
     
 }
 
@@ -834,7 +834,7 @@ simple.comp.prep <- function(data, spectra.line.table, element.line, norm.min, n
 lucas.simp.prep <- function(spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
     
     
-    intensity <- spectra.line.table[,element.line]
+    Amplitude <- spectra.line.table[,element.line]
     
     
     intercept.none <- rep(0, length(spectra.line.table[,1]))
@@ -860,18 +860,18 @@ lucas.simp.prep <- function(spectra.line.table, element.line, slope.element.line
     
     
     
-    predict.frame.luk <- data.frame(((1+intensity/(intensity+lucas.intercept))-lucas.intercept/(intensity+lucas.intercept)),lucas.slope)
-    colnames(predict.frame.luk) <- c("Intensity", names(lucas.slope))
+    predict.frame.luk <- data.frame(((1+Amplitude/(Amplitude+lucas.intercept))-lucas.intercept/(Amplitude+lucas.intercept)),lucas.slope)
+    colnames(predict.frame.luk) <- c("Amplitude", names(lucas.slope))
     
-    predict.frame.luk <- data.frame(((1+intensity/(intensity+lucas.intercept)-lucas.intercept/(intensity+lucas.intercept))),lucas.slope)
-    colnames(predict.frame.luk) <- c("Intensity", names(lucas.slope))
+    predict.frame.luk <- data.frame(((1+Amplitude/(Amplitude+lucas.intercept)-lucas.intercept/(Amplitude+lucas.intercept))),lucas.slope)
+    colnames(predict.frame.luk) <- c("Amplitude", names(lucas.slope))
     
     
     
-    predict.intensity.luk <- data.frame(predict.frame.luk$Intensity, lucas.slope)
-    colnames(predict.intensity.luk) <- c("Intensity", names(lucas.slope))
+    predict.amplitude.luk <- data.frame(predict.frame.luk$Amplitude, lucas.slope)
+    colnames(predict.amplitude.luk) <- c("Amplitude", names(lucas.slope))
     
-    predict.intensity.luk
+    predict.amplitude.luk
     
     
 }
@@ -881,7 +881,7 @@ lucas.simp.prep <- function(spectra.line.table, element.line, slope.element.line
 lucas.tc.prep <- function(data, spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
     
     
-    intensity <- spectra.line.table[,element.line]
+    Amplitude <- spectra.line.table[,element.line]
     
     
     total.counts <- aggregate(CPS~Spectrum, data=data, sum)
@@ -911,11 +911,11 @@ lucas.tc.prep <- function(data, spectra.line.table, element.line, slope.element.
     
     
     
-    predict.intensity.luc.tc <- data.frame(((1+intensity/(intensity+lucas.intercept.tc)-lucas.intercept.tc/(intensity+lucas.intercept.tc))),lucas.slope.tc)
-    colnames(predict.intensity.luc.tc) <- c("Intensity", names(lucas.slope.tc))
+    predict.amplitude.luc.tc <- data.frame(((1+Amplitude/(Amplitude+lucas.intercept.tc)-lucas.intercept.tc/(Amplitude+lucas.intercept.tc))),lucas.slope.tc)
+    colnames(predict.amplitude.luc.tc) <- c("Amplitude", names(lucas.slope.tc))
     
     
-    predict.intensity.luc.tc
+    predict.amplitude.luc.tc
 }
 
 
@@ -925,12 +925,12 @@ lucas.tc.prep <- function(data, spectra.line.table, element.line, slope.element.
 lucas.comp.prep <- function(data, spectra.line.table, element.line, slope.element.lines, intercept.element.lines, norm.min, norm.max) {
     
     
-    intensity <- spectra.line.table[,element.line]
+    Amplitude <- spectra.line.table[,element.line]
     
     
     
-    compton.norm <- subset(data$CPS, !(data$Energy < norm.min | data$Energy > norm.max))
-    compton.file <- subset(data$Spectrum, !(data$Energy < norm.min | data$Energy > norm.max))
+    compton.norm <- subset(data$CPS, !(data$Wavenumber < norm.min | data$Wavenumber > norm.max))
+    compton.file <- subset(data$Spectrum, !(data$Wavenumber < norm.min | data$Wavenumber > norm.max))
     compton.frame <- data.frame(is.0(compton.norm, compton.file))
     colnames(compton.frame) <- c("Compton", "Spectrum")
     compton.frame.ag <- aggregate(list(compton.frame$Compton), by=list(compton.frame$Spectrum), FUN="sum")
@@ -960,16 +960,16 @@ lucas.comp.prep <- function(data, spectra.line.table, element.line, slope.elemen
     colnames(lucas.slope.comp) <- slope.element.lines
     
     
-    predict.frame.luc.comp <- data.frame(((1+intensity/compton.frame.ag$Compton)/(intensity/compton.frame.ag$Compton+lucas.intercept.comp)-lucas.intercept.comp/(intensity/compton.frame.ag$Compton+lucas.intercept.comp)),lucas.slope.comp)
-    colnames(predict.frame.luc.comp) <- c("Intensity", names(lucas.slope.comp))
+    predict.frame.luc.comp <- data.frame(((1+Amplitude/compton.frame.ag$Compton)/(Amplitude/compton.frame.ag$Compton+lucas.intercept.comp)-lucas.intercept.comp/(Amplitude/compton.frame.ag$Compton+lucas.intercept.comp)),lucas.slope.comp)
+    colnames(predict.frame.luc.comp) <- c("Amplitude", names(lucas.slope.comp))
     
     
     
-    predict.intensity.luc.comp <- data.frame(predict.frame.luc.comp$Intensity, lucas.slope.comp)
-    colnames(predict.intensity.luc.comp) <- c("Intensity", names(lucas.slope.comp))
+    predict.amplitude.luc.comp <- data.frame(predict.frame.luc.comp$Amplitude, lucas.slope.comp)
+    colnames(predict.amplitude.luc.comp) <- c("Amplitude", names(lucas.slope.comp))
     
     
-    predict.intensity.luc.comp
+    predict.amplitude.luc.comp
 }
 
 
@@ -987,23 +987,23 @@ lucas.comp.prep <- function(data, spectra.line.table, element.line, slope.elemen
 
 general.prep.net <- function(spectra.line.table, element.line) {
     
-    intensity <- spectra.line.table[,element.line]
+    Amplitude <- spectra.line.table[,element.line]
     
     
-    predict.frame <- data.frame(intensity)
-    colnames(predict.frame) <- c("Intensity")
+    predict.frame <- data.frame(Amplitude)
+    colnames(predict.frame) <- c("Amplitude")
     
     
     
-    predict.intensity <- data.frame(predict.frame$Intensity)
-    colnames(predict.intensity) <- c("Intensity")
+    predict.amplitude <- data.frame(predict.frame$Amplitude)
+    colnames(predict.amplitude) <- c("Amplitude")
     
-    predict.intensity
+    predict.amplitude
 }
 
 simple.tc.prep.net <- function(data,spectra.line.table, element.line) {
     
-    intensity <- spectra.line.table[,element.line]
+    Amplitude <- spectra.line.table[,element.line]
     
     total.counts.net <- rowSums(spectra.line.table[,-1])
     total.counts <- data.frame(data$Spectrum, total.counts.net)
@@ -1011,15 +1011,15 @@ simple.tc.prep.net <- function(data,spectra.line.table, element.line) {
     
     
     
-    predict.frame.tc <- data.frame(intensity/total.counts$CPS)
-    colnames(predict.frame.tc) <- c("Intensity")
+    predict.frame.tc <- data.frame(Amplitude/total.counts$CPS)
+    colnames(predict.frame.tc) <- c("Amplitude")
     
     
     
-    predict.intensity.tc <- data.frame(predict.frame.tc$Intensity)
-    colnames(predict.intensity.tc) <- c("Intensity")
+    predict.amplitude.tc <- data.frame(predict.frame.tc$Amplitude)
+    colnames(predict.amplitude.tc) <- c("Amplitude")
     
-    predict.intensity.tc
+    predict.amplitude.tc
 }
 
 
@@ -1027,7 +1027,7 @@ simple.comp.prep.net <- function(data, spectra.line.table, element.line, norm.mi
     
     
     
-    intensity <- spectra.line.table[,element.line]
+    Amplitude <- spectra.line.table[,element.line]
     
     
     compton.ag.fake.Spectrum <- data$Spectrum
@@ -1035,15 +1035,15 @@ simple.comp.prep.net <- function(data, spectra.line.table, element.line, norm.mi
     compton.ag.fake <- data.frame(compton.ag.fake.Spectrum,compton.ag.fake.Compton)
     colnames(compton.ag.fake) <- c("Spectrum", "Compton")
     
-    predict.frame.comp <- data.frame( intensity/compton.ag.fake$Compton)
-    colnames(predict.frame.comp) <- c("Intensity")
+    predict.frame.comp <- data.frame( Amplitude/compton.ag.fake$Compton)
+    colnames(predict.frame.comp) <- c("Amplitude")
     
     
     
-    predict.intensity.comp <- data.frame(predict.frame.comp$Intensity)
-    colnames(predict.intensity.comp) <- c("Intensity")
+    predict.amplitude.comp <- data.frame(predict.frame.comp$Amplitude)
+    colnames(predict.amplitude.comp) <- c("Amplitude")
     
-    predict.intensity.comp
+    predict.amplitude.comp
     
 }
 
@@ -1056,7 +1056,7 @@ simple.comp.prep.net <- function(data, spectra.line.table, element.line, norm.mi
 lucas.simp.prep.net <- function(spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
     
     
-    intensity <- spectra.line.table[,element.line]
+    Amplitude <- spectra.line.table[,element.line]
     
     intercept.none <- rep(0, length(spectra.line.table[,1]))
     lucas.intercept.table.x <- data.frame(spectra.line.table, intercept.none, intercept.none)
@@ -1081,15 +1081,15 @@ lucas.simp.prep.net <- function(spectra.line.table, element.line, slope.element.
     
     
     
-    predict.frame.luk <- data.frame(((1+intensity/(intensity+lucas.intercept))-lucas.intercept/(intensity+lucas.intercept)),lucas.slope)
-    colnames(predict.frame.luk) <- c("Intensity", names(lucas.slope))
+    predict.frame.luk <- data.frame(((1+Amplitude/(Amplitude+lucas.intercept))-lucas.intercept/(Amplitude+lucas.intercept)),lucas.slope)
+    colnames(predict.frame.luk) <- c("Amplitude", names(lucas.slope))
     
     
     
-    predict.intensity.luk <- data.frame(predict.frame.luk$Intensity, lucas.slope)
-    colnames(predict.intensity.luk) <- c("Intensity", names(lucas.slope))
+    predict.amplitude.luk <- data.frame(predict.frame.luk$Amplitude, lucas.slope)
+    colnames(predict.amplitude.luk) <- c("Amplitude", names(lucas.slope))
     
-    predict.intensity.luk
+    predict.amplitude.luk
     
     
 }
@@ -1099,7 +1099,7 @@ lucas.simp.prep.net <- function(spectra.line.table, element.line, slope.element.
 lucas.tc.prep.net <- function(data, spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
     
     
-    intensity <- spectra.line.table[,element.line]
+    Amplitude <- spectra.line.table[,element.line]
     
     
     total.counts.net <- rowSums(spectra.line.table[,-1])
@@ -1133,18 +1133,18 @@ lucas.tc.prep.net <- function(data, spectra.line.table, element.line, slope.elem
     colnames(lucas.slope.tc) <- slope.element.lines
     
     
-    predict.intensity.luc.tc <- data.frame(((1+intensity/(intensity+lucas.intercept.tc)-lucas.intercept.tc/(intensity+lucas.intercept.tc))),lucas.slope.tc)
-    colnames(predict.intensity.luc.tc) <- c("Intensity", names(lucas.slope.tc))
+    predict.amplitude.luc.tc <- data.frame(((1+Amplitude/(Amplitude+lucas.intercept.tc)-lucas.intercept.tc/(Amplitude+lucas.intercept.tc))),lucas.slope.tc)
+    colnames(predict.amplitude.luc.tc) <- c("Amplitude", names(lucas.slope.tc))
     
     
-    predict.intensity.luc.tc
+    predict.amplitude.luc.tc
 }
 
 
 lucas.comp.prep.net <- function(data, spectra.line.table, element.line, slope.element.lines, intercept.element.lines, norm.min, norm.max) {
     
     
-    intensity <- spectra.line.table[,element.line]
+    Amplitude <- spectra.line.table[,element.line]
     
     
     
@@ -1180,23 +1180,23 @@ lucas.comp.prep.net <- function(data, spectra.line.table, element.line, slope.el
     
     
     
-    predict.frame.luc.comp <- data.frame(((1+predict.frame.comp$Intensity/(predict.frame.comp$Intensity+lucas.intercept.comp)-lucas.intercept.comp/(predict.frame.comp$Intensity+lucas.intercept.comp))),lucas.slope.comp)
-    colnames(predict.frame.luc.comp) <- c("Intensity", names(lucas.slope.comp))
+    predict.frame.luc.comp <- data.frame(((1+predict.frame.comp$Amplitude/(predict.frame.comp$Amplitude+lucas.intercept.comp)-lucas.intercept.comp/(predict.frame.comp$Amplitude+lucas.intercept.comp))),lucas.slope.comp)
+    colnames(predict.frame.luc.comp) <- c("Amplitude", names(lucas.slope.comp))
     
     
     
-    predict.intensity.luc.comp <- data.frame(predict.frame.luc.comp$Intensity, lucas.slope.comp)
-    colnames(predict.intensity.luc.comp) <- c("Intensity", names(lucas.slope.comp))
+    predict.amplitude.luc.comp <- data.frame(predict.frame.luc.comp$Amplitude, lucas.slope.comp)
+    colnames(predict.amplitude.luc.comp) <- c("Amplitude", names(lucas.slope.comp))
     
     
-    predict.intensity.luc.comp
+    predict.amplitude.luc.comp
 }
 
 
 in_range <- function(spectrum, peak, pritable){
     
     temp <- pritable[(pritable$Max>=peak & pritable$Min<=peak),]
-    temp <- temp[complete.cases(temp[,c("id", "Peak.Range", "Wavelengths", "Max", "Min", "Type", "General")]),]
+    temp <- temp[complete.cases(temp[,c("id", "Peak.Range", "Wavenumbers", "Max", "Min", "Type", "General")]),]
     temp$Spectrum <- rep(spectrum, length(temp[,1]))
     temp$Peak <- rep(peak, length(temp[,1]))
     

@@ -80,7 +80,7 @@ shinyServer(function(input, output, session) {
             
             myfiles.frame <- as.data.frame(do.call(rbind, pblapply(seq(1, n, 1), function(x) readDPTData(filepath=inFile$datapath[x], filename=inFile$name[x]))))
         
-        myfiles.frame$Wavelength <- myfiles.frame$Wavelength + gainshiftHold()
+        myfiles.frame$Wavenumber <- myfiles.frame$Wavenumber + gainshiftHold()
         
         myfiles.frame
 
@@ -97,7 +97,7 @@ shinyServer(function(input, output, session) {
             
             myfiles.frame <- as.data.frame(do.call(rbind, pblapply(seq(1, n, 1), function(x) readCSVData(filepath=inFile$datapath[x], filename=inFile$name[x]))))
             
-        myfiles.frame$Wavelength <- myfiles.frame$Wavelength + gainshiftHold()
+        myfiles.frame$Wavenumber <- myfiles.frame$Wavenumber + gainshiftHold()
         
         myfiles.frame
      
@@ -114,7 +114,7 @@ shinyServer(function(input, output, session) {
         
         myfiles.frame <- as.data.frame(do.call(rbind, pblapply(seq(1, n, 1), function(x) readOpusData(filepath=inFile$datapath[x], filename=inFile$name[x]))))
         
-        myfiles.frame$Wavelength <- myfiles.frame$Wavelength + gainshiftHold()
+        myfiles.frame$Wavenumber <- myfiles.frame$Wavenumber + gainshiftHold()
         
         myfiles.frame
         
@@ -190,7 +190,7 @@ shinyServer(function(input, output, session) {
             
             data <- dataHold()
             
-            data <- data[order(data$Wavelength),]
+            data <- data[order(data$Wavenumber),]
             data$Amplitude <- SMA(data$Amplitude, 10)
             data$Spectrum <- rep("Combined", length(data$Amplitude))
             
@@ -344,7 +344,7 @@ shinyServer(function(input, output, session) {
                 names(newdata) <- names(data)
                 newdata <- lapply(names(newdata), function(x) as.data.frame(newdata[[x]][newdata[[x]]$findpeaks, ]))
                 final.data <- as.data.frame(do.call(rbind, newdata))
-                final.data[,c("Spectrum", "Wavelength", "Amplitude")]
+                final.data[,c("Spectrum", "Wavenumber", "Amplitude")]
 
             
             
@@ -367,7 +367,7 @@ shinyServer(function(input, output, session) {
         )
         
         
-        intensityDescriptive <- reactive({
+        AmplitudeDescriptive <- reactive({
             
             min <- min(dataManipulate()[,3])
             max <- max(dataManipulate()[,3])
@@ -388,7 +388,7 @@ shinyServer(function(input, output, session) {
             if(input$showpeaks==FALSE){
                 sliderInput('spikeheight', "Spike Height", min=0, max=1, value=.1)
             }else if(input$showpeaks==TRUE){
-                sliderInput('spikeheight', "Spike Height", min=intensityDescriptive()[1], max=intensityDescriptive()[2], value=intensityDescriptive()[3])
+                sliderInput('spikeheight', "Spike Height", min=AmplitudeDescriptive()[1], max=AmplitudeDescriptive()[2], value=AmplitudeDescriptive()[3])
 
             }
             
@@ -402,7 +402,7 @@ shinyServer(function(input, output, session) {
             
             n <- seq(from=1, to=length(peakTable()[,1]), by=1)
             
-            table.list <- pblapply(n, function(x) in_range(spectrum=peakTable()$Spectrum[x],peak=peakTable()$Wavelength[x], pritable=pritable))
+            table.list <- pblapply(n, function(x) in_range(spectrum=peakTable()$Spectrum[x],peak=peakTable()$Wavenumber[x], pritable=pritable))
             
             data <- do.call(rbind, table.list)
             
@@ -562,17 +562,17 @@ shinyServer(function(input, output, session) {
              
              data <- dataManipulate()
 
-             n <- length(data$Wavelength)
+             n <- length(data$Wavenumber)
              
             normal <- ggplot(data) +
-             geom_line(aes(Wavelength, Amplitude, colour=Spectrum)) +
+             geom_line(aes(Wavenumber, Amplitude, colour=Spectrum)) +
              theme_light()+
              theme(legend.position="bottom") +
              scale_colour_discrete("Spectrum") +
              scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), limits=c(max(data[,2]), min(data[,2])), breaks=seq(0, 4000, 250)) +
              scale_y_continuous("Amplitude") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
-             geom_point(data=peakTable(), aes(Wavelength, Amplitude), shape=1, size=3) +
+             geom_point(data=peakTable(), aes(Wavenumber, Amplitude), shape=1, size=3) +
              theme(axis.text.x = element_text(size=15)) +
              theme(axis.text.y = element_text(size=15)) +
              theme(axis.title.x = element_text(size=15)) +
@@ -582,13 +582,13 @@ shinyServer(function(input, output, session) {
              theme(legend.text=element_text(size=15))
              
              combine <- ggplot(data) +
-             geom_line(aes(Wavelength, Amplitude)) +
+             geom_line(aes(Wavenumber, Amplitude)) +
              theme_light()+
              theme(legend.position="bottom") +
              scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), breaks=seq(0, 4000, 250)) +
              scale_y_continuous("Amplitude") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
-             geom_point(data=peakTable(), aes(Wavelength, Amplitude), shape=1, size=3) +
+             geom_point(data=peakTable(), aes(Wavenumber, Amplitude), shape=1, size=3) +
              theme(axis.text.x = element_text(size=15)) +
              theme(axis.text.y = element_text(size=15)) +
              theme(axis.title.x = element_text(size=15)) +
@@ -598,14 +598,14 @@ shinyServer(function(input, output, session) {
              theme(legend.text=element_text(size=15))
              
              normal.invert <- ggplot(data) +
-             geom_line(aes(Wavelength, Amplitude, colour=Spectrum)) +
+             geom_line(aes(Wavenumber, Amplitude, colour=Spectrum)) +
              theme_light()+
              theme(legend.position="bottom") +
              scale_colour_discrete("Spectrum") +
              scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), breaks=seq(0, 4000, 250)) +
              scale_y_reverse("Amplitude") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
-             geom_point(data=peakTable(), aes(Wavelength, Amplitude), shape=1, size=3) +
+             geom_point(data=peakTable(), aes(Wavenumber, Amplitude), shape=1, size=3) +
              theme(axis.text.x = element_text(size=15)) +
              theme(axis.text.y = element_text(size=15)) +
              theme(axis.title.x = element_text(size=15)) +
@@ -615,13 +615,13 @@ shinyServer(function(input, output, session) {
              theme(legend.text=element_text(size=15))
              
              combine.invert <- ggplot(data) +
-             geom_line(aes(Wavelength, Amplitude)) +
+             geom_line(aes(Wavenumber, Amplitude)) +
              theme_light()+
              theme(legend.position="bottom") +
              scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), breaks=seq(0, 4000, 250)) +
              scale_y_reverse("Amplitude") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
-             geom_point(data=peakTable(), aes(Wavelength, Amplitude), shape=1, size=3) +
+             geom_point(data=peakTable(), aes(Wavenumber, Amplitude), shape=1, size=3) +
              theme(axis.text.x = element_text(size=15)) +
              theme(axis.text.y = element_text(size=15)) +
              theme(axis.title.x = element_text(size=15)) +
@@ -698,7 +698,7 @@ shinyServer(function(input, output, session) {
             wellPanel(
             style = style,
             p(HTML(paste0("Spectrum:", " ", point$Spectrum))),
-            p(HTML(paste0("Wavelength:", " ", round(point$Wavelength, 0)))),
+            p(HTML(paste0("Wavenumber:", " ", round(point$Wavenumber, 0)))),
             p(HTML(paste0("Amplitude:", " ", round(point$Amplitude, 2))))
             )
         })
@@ -770,7 +770,7 @@ shinyServer(function(input, output, session) {
     
     waveInputCal <- reactive({
         
-        #elements <- wavelengthlinestouse()
+        #elements <- Wavenumberlinestouse()
         
         
         
@@ -932,7 +932,7 @@ shinyServer(function(input, output, session) {
         
         range_subset <- function(range.frame, data){
             
-            new.data <- subset(data, Wavelength >= range.frame$WaveMin & Wavelength <= range.frame$WaveMax, drop=TRUE)
+            new.data <- subset(data, Wavenumber >= range.frame$WaveMin & Wavenumber <= range.frame$WaveMax, drop=TRUE)
             newer.data <- aggregate(new.data, by=list(new.data$Spectrum), FUN=mean, na.rm=TRUE)[,c("Group.1", "Amplitude")]
             colnames(newer.data) <- c("Spectrum", as.character(range.frame$Name))
             newer.data
@@ -970,7 +970,7 @@ shinyServer(function(input, output, session) {
     
     hotableInputCal <- reactive({
         
-        lines <- wavelengthlinestouse()
+        lines <- Wavenumberlinestouse()
         
         
         
@@ -1125,7 +1125,7 @@ shinyServer(function(input, output, session) {
     })
     
     
-    wavelengthlinestouse <- reactive({
+    Wavenumberlinestouse <- reactive({
         
         wavevalues[["DF"]]$Name
         
@@ -1135,7 +1135,7 @@ shinyServer(function(input, output, session) {
     outVar <- reactive({
         input$hotableprocess2
         
-        myelements <- wavelengthlinestouse()
+        myelements <- Wavenumberlinestouse()
         
         result <- if(is.null(myelements)){
             NULL
@@ -1152,7 +1152,7 @@ shinyServer(function(input, output, session) {
         input$hotableprocess2
         
         
-        myelements <- c(wavelengthlinestouse())
+        myelements <- c(Wavenumberlinestouse())
         
         
         if(is.null(myelements)){
@@ -1167,7 +1167,7 @@ shinyServer(function(input, output, session) {
         input$hotableprocess2
         
         
-        mylines <- c(wavelengthlinestouse())
+        mylines <- c(Wavenumberlinestouse())
         
         
         if(is.null(mylines)){
@@ -1315,7 +1315,7 @@ shinyServer(function(input, output, session) {
         
         line <- input$calcurveline
         
-        choices <- wavelengthlinestouse()
+        choices <- Wavenumberlinestouse()
         spectra.line.table <- spectraLineTable()
         data <- dataNorm()
         concentration.table <- concentrationTable()
@@ -1337,15 +1337,15 @@ shinyServer(function(input, output, session) {
         
         
         time.bic <- if(dataType()=="Spectra"){
-            extractAIC(lm(concentration.table[, input$calcurveline]~general.prep(spectra.line.table, input$calcurveline)$Intensity, na.action=na.exclude), k=log(length(1)))[2]
+            extractAIC(lm(concentration.table[, input$calcurveline]~general.prep(spectra.line.table, input$calcurveline)$Amplitude, na.action=na.exclude), k=log(length(1)))[2]
         } else if(dataType()=="Net"){
-            extractAIC(lm(concentration.table[, input$calcurveline]~general.prep.net(spectra.line.table, input$calcurveline)$Intensity, na.action=na.exclude), k=log(length(1)))[2]
+            extractAIC(lm(concentration.table[, input$calcurveline]~general.prep.net(spectra.line.table, input$calcurveline)$Amplitude, na.action=na.exclude), k=log(length(1)))[2]
         }
         
         tc.bic <- if(dataType()=="Spectra"){
-            extractAIC(lm(concentration.table[, input$calcurveline]~simple.tc.prep(data, spectra.line.table, input$calcurveline)$Intensity, na.action=na.exclude), k=log(length(1)))[2]
+            extractAIC(lm(concentration.table[, input$calcurveline]~simple.tc.prep(data, spectra.line.table, input$calcurveline)$Amplitude, na.action=na.exclude), k=log(length(1)))[2]
         } else if(dataType()=="Net"){
-            extractAIC(lm(concentration.table[, input$calcurveline]~simple.tc.prep.net(data, spectra.line.table, input$calcurveline)$Intensity, na.action=na.exclude), k=log(length(1)))[2]
+            extractAIC(lm(concentration.table[, input$calcurveline]~simple.tc.prep.net(data, spectra.line.table, input$calcurveline)$Amplitude, na.action=na.exclude), k=log(length(1)))[2]
         }
         
         comp.bic <- if(dataType()=="Spectra"){
@@ -1434,13 +1434,13 @@ shinyServer(function(input, output, session) {
     
     output$comptonMinInput <- renderUI({
         
-        numericInput('comptonmin', label=h6("Min"), step=0.001, value=normMinSelection(), min=0, max=50, width='30%')
+        numericInput('comptonmin', label=h6("Min"), step=1, value=normMinSelection(), min=400, max=4000, width='30%')
         
     })
     
     output$comptonMaxInput <- renderUI({
         
-        numericInput('comptonmax', label=h6("Max"), step=0.001, value=normMaxSelection(), min=0, max=50, width='30%')
+        numericInput('comptonmax', label=h6("Max"), step=1, value=normMaxSelection(), min=400, max=4000, width='30%')
         
     })
     
@@ -1476,7 +1476,7 @@ shinyServer(function(input, output, session) {
         
         line <- input$calcurveline
         
-        choices <- wavelengthlinestouse()
+        choices <- Wavenumberlinestouse()
         
         spectra.line.table <- if(all(cephlopodVector() %in% colnames(spectraLineTable()))==TRUE){
             spectraLineTable()
@@ -1491,7 +1491,7 @@ shinyServer(function(input, output, session) {
         spectra.line.table <- spectra.line.table[spectra.line.table$Spectrum %in% holdFrame()$Spectrum, ]
         
         
-        predict.intensity.list <- if(input$normcal==1){
+        predict.amplitude.list <- if(input$normcal==1){
             pblapply(cephlopodVector(), function(x) lucas.simp.prep(spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=line, intercept.element.lines=c(line, x)))
         } else if(input$normcal==2){
             pblapply(cephlopodVector(), function(x) lucas.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=line, intercept.element.lines=c(line, x)))
@@ -1499,7 +1499,7 @@ shinyServer(function(input, output, session) {
             pblapply(cephlopodVector(), function(x) lucas.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=line, intercept.element.lines=c(line, x), norm.min=input$comptonmin, norm.max=input$comptonmax))
         }
         
-        optimal_intercept_chain(element=line, intensities=predict.intensity.list, values=concentration.table, keep=vals$keeprows)
+        optimal_intercept_chain(element=line, intensities=predict.amplitude.list, values=concentration.table, keep=vals$keeprows)
         
         
     })
@@ -1582,7 +1582,7 @@ shinyServer(function(input, output, session) {
             }
         }
         
-        #cal.table <- cal.table[,!colnames(cal.table) %in% "Intensity"]
+        #cal.table <- cal.table[,!colnames(cal.table) %in% "Amplitude"]
         cal.table$Concentration <- concentration.table[,input$calcurveline]
         
         
@@ -1624,7 +1624,7 @@ shinyServer(function(input, output, session) {
         
         fit.lm <- caretSlope()
         
-        first.combos <- c(wavelengthlinestouse()[!wavelengthlinestouse() %in% input$calcurveline])
+        first.combos <- c(Wavenumberlinestouse()[!Wavenumberlinestouse() %in% input$calcurveline])
         
         coef.frame <- as.data.frame(summary(fit.lm)$coefficients)
         sig.frame <- subset(coef.frame, coef.frame[,4] < 0.05)
@@ -1643,7 +1643,7 @@ shinyServer(function(input, output, session) {
         
         line <- input$calcurveline
         
-        choices <- wavelengthlinestouse()
+        choices <- Wavenumberlinestouse()
         spectra.line.table <- spectraLineTable()
         data <- dataNorm()
         concentration.table <- concentrationTable()
@@ -1664,20 +1664,20 @@ shinyServer(function(input, output, session) {
         
         
         
-        predict.intensity <- if(input$normcal==1){
+        predict.amplitude <- if(input$normcal==1){
             if(dataType()=="Spectra"){
                 lucas.simp.prep(spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             } else if(dataType()=="Net"){
                 lucas.simp.prep.net(spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             }
         } else if(input$normcal==2){
-            predict.intensity <- if(dataType()=="Spectra"){
+            predict.amplitude <- if(dataType()=="Spectra"){
                 lucas.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             } else if(dataType()=="Net"){
                 lucas.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             }
         } else if(input$normcal==3){
-            predict.intensity <- if(dataType()=="Spectra"){
+            predict.amplitude <- if(dataType()=="Spectra"){
                 lucas.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
             } else if(dataType()=="Net"){
                 lucas.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
@@ -1686,7 +1686,7 @@ shinyServer(function(input, output, session) {
         
         
         
-        #optimal_r_chain(element=element, intensities=predict.intensity, values= concentration.table, possible.slopes=fishVector(), keep=vals$keeprows)
+        #optimal_r_chain(element=element, intensities=predict.amplitude, values= concentration.table, possible.slopes=fishVector(), keep=vals$keeprows)
         
         results <- variable_select_short(slopeImportance())
         
@@ -1771,43 +1771,43 @@ shinyServer(function(input, output, session) {
         #spectra.line.table <- spectra.line.table[complete.cases(concentration.table[, input$calcurveline]),]
         #data <- data[data$Spectrum %in% concentration.table$Spectrum, ]
         
-        predict.intensity <- if(input$normcal==1){
+        predict.amplitude <- if(input$normcal==1){
             if(dataType()=="Spectra"){
-                lucas.simp.prep(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=wavelengthlinestouse(), intercept.element.lines=input$intercept_vars)
+                lucas.simp.prep(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
             } else if(dataType()=="Net"){
-                lucas.simp.prep.net(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=wavelengthlinestouse(), intercept.element.lines=input$intercept_vars)
+                lucas.simp.prep.net(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
             }
         } else if(input$normcal==2){
-            predict.intensity <- if(dataType()=="Spectra"){
-                lucas.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=wavelengthlinestouse(), intercept.element.lines=input$intercept_vars)
+            predict.amplitude <- if(dataType()=="Spectra"){
+                lucas.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
             } else if(dataType()=="Net"){
-                lucas.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=wavelengthlinestouse(), intercept.element.lines=input$intercept_vars)
+                lucas.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
             }
         } else if(input$normcal==3){
-            predict.intensity <- if(dataType()=="Spectra"){
-                lucas.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=wavelengthlinestouse(), intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+            predict.amplitude <- if(dataType()=="Spectra"){
+                lucas.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
             } else if(dataType()=="Net"){
-                lucas.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=wavelengthlinestouse(), intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                lucas.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
             }
         }
         
         
         
-        predict.frame <- data.frame(predict.intensity, concentration.table[,input$calcurveline])
+        predict.frame <- data.frame(predict.amplitude, concentration.table[,input$calcurveline])
         predict.frame <- predict.frame[complete.cases(predict.frame),]
         predict.frame <- predict.frame[vals$keeprows,]
-        colnames(predict.frame) <- c(names(predict.intensity), "Concentration")
+        colnames(predict.frame) <- c(names(predict.amplitude), "Concentration")
         predict.frame <- predict.frame[complete.cases(predict.frame$Concentration),]
         
         
-        predict.frame.simp <- predict.frame[,c("Concentration", "Intensity")]
-        predict.frame.luc <- predict.frame[, c("Concentration", "Intensity", input$slope_vars)]
+        predict.frame.simp <- predict.frame[,c("Concentration", "Amplitude")]
+        predict.frame.luc <- predict.frame[, c("Concentration", "Amplitude", input$slope_vars)]
         predict.frame.forest <- predict.frame
         
         
-        cal.lm.simp <- lm(Concentration~Intensity, data=predict.frame.simp, na.action=na.exclude)
+        cal.lm.simp <- lm(Concentration~Amplitude, data=predict.frame.simp, na.action=na.exclude)
         
-        cal.lm.two <- lm(Concentration~Intensity + I(Intensity^2), data=predict.frame.simp, na.action=na.exclude)
+        cal.lm.two <- lm(Concentration~Amplitude + I(Amplitude^2), data=predict.frame.simp, na.action=na.exclude)
         
         cal.lm.luc <- lm(Concentration~., data=predict.frame.luc, na.action=na.exclude)
         
@@ -1899,8 +1899,8 @@ shinyServer(function(input, output, session) {
         cal.condition <- 3
         norm.condition <- 1
         
-        norm.min <- 18.5
-        norm.max <- 19.5
+        norm.min <- 2000
+        norm.max <- 2250
         
         cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max)
         colnames(cal.table) <- c("CalType", "NormType", "Min", "Max")
@@ -2070,12 +2070,12 @@ shinyServer(function(input, output, session) {
         
         
         
-        intensity <- as.vector(as.numeric(unlist(spectraLineTable()[,input$calcurveline])))
+        Amplitude <- as.vector(as.numeric(unlist(spectraLineTable()[,input$calcurveline])))
         
         spectra.names <- spectra.line.table$Spectrum
         
-        hold.frame <- data.frame(spectra.names, concentration, intensity)
-        colnames(hold.frame) <- c("Spectrum", "Concentration", "Intensity")
+        hold.frame <- data.frame(spectra.names, concentration, Amplitude)
+        colnames(hold.frame) <- c("Spectrum", "Concentration", "Amplitude")
         hold.frame <- na.omit(hold.frame)
         
         hold.frame <- hold.frame[order(as.character(hold.frame$Spectrum)),]
@@ -2097,12 +2097,12 @@ shinyServer(function(input, output, session) {
     
     predictFramePre <- reactive({
         
-        intensity <- holdFrame()$Intensity
+        Amplitude <- holdFrame()$Amplitude
         
         concentration <- holdFrame()$Concentration
         
-        predict.frame <- data.frame(concentration, intensity)
-        colnames(predict.frame) <- c("Concentration", "Intensity")
+        predict.frame <- data.frame(concentration, Amplitude)
+        colnames(predict.frame) <- c("Concentration", "Amplitude")
         
         
         predict.frame
@@ -2112,7 +2112,7 @@ shinyServer(function(input, output, session) {
     
     
     
-    predictIntensity <- reactive({
+    predictAmplitude <- reactive({
         
         spectra.line.table <- spectraLineTable()
         data <- dataNorm()
@@ -2124,7 +2124,7 @@ shinyServer(function(input, output, session) {
         if (input$radiocal==1){
             
             if(input$normcal==1){
-                predict.intensity <- if(dataType()=="Spectra"){
+                predict.amplitude <- if(dataType()=="Spectra"){
                     general.prep(spectra.line.table=spectra.line.table, element.line=input$calcurveline)
                 } else if(dataType()=="Net"){
                     general.prep.net(spectra.line.table=spectra.line.table, element.line=input$calcurveline)
@@ -2132,7 +2132,7 @@ shinyServer(function(input, output, session) {
             }
             
             if(input$normcal==2){
-                predict.intensity <- if(dataType()=="Spectra"){
+                predict.amplitude <- if(dataType()=="Spectra"){
                     simple.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline)
                 } else if(dataType()=="Net"){
                     simple.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline)
@@ -2140,7 +2140,7 @@ shinyServer(function(input, output, session) {
             }
             
             if(input$normcal==3){
-                predict.intensity <- if(dataType()=="Spectra"){
+                predict.amplitude <- if(dataType()=="Spectra"){
                     simple.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, norm.min=input$comptonmin, norm.max=input$comptonmax)
                 } else if(dataType()=="Net"){
                     simple.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, norm.min=input$comptonmin, norm.max=input$comptonmax)
@@ -2152,7 +2152,7 @@ shinyServer(function(input, output, session) {
         if (input$radiocal==2){
             
             if(input$normcal==1){
-                predict.intensity <- if(dataType()=="Spectra"){
+                predict.amplitude <- if(dataType()=="Spectra"){
                     general.prep(spectra.line.table=spectra.line.table, element.line=input$calcurveline)
                 } else if(dataType()=="Net"){
                     general.prep.net(spectra.line.table=spectra.line.table, element.line=input$calcurveline)
@@ -2160,7 +2160,7 @@ shinyServer(function(input, output, session) {
             }
             
             if(input$normcal==2){
-                predict.intensity <- if(dataType()=="Spectra"){
+                predict.amplitude <- if(dataType()=="Spectra"){
                     simple.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline)
                 } else if(dataType()=="Net"){
                     simple.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline)
@@ -2168,7 +2168,7 @@ shinyServer(function(input, output, session) {
             }
             
             if(input$normcal==3){
-                predict.intensity <- if(dataType()=="Spectra"){
+                predict.amplitude <- if(dataType()=="Spectra"){
                     simple.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, norm.min=input$comptonmin, norm.max=input$comptonmax)
                 } else if(dataType()=="Net"){
                     simple.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, norm.min=input$comptonmin, norm.max=input$comptonmax)
@@ -2181,7 +2181,7 @@ shinyServer(function(input, output, session) {
         if (input$radiocal==3){
             
             if(input$normcal==1){
-                predict.intensity <- if(dataType()=="Spectra"){
+                predict.amplitude <- if(dataType()=="Spectra"){
                     lucas.simp.prep(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars)
                 } else if(dataType()=="Net"){
                     lucas.simp.prep.net(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars)
@@ -2189,7 +2189,7 @@ shinyServer(function(input, output, session) {
             }
             
             if(input$normcal==2){
-                predict.intensity <- if(dataType()=="Spectra"){
+                predict.amplitude <- if(dataType()=="Spectra"){
                     lucas.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars)
                 } else if(dataType()=="Net"){
                     lucas.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars)
@@ -2197,7 +2197,7 @@ shinyServer(function(input, output, session) {
             }
             
             if(input$normcal==3){
-                predict.intensity <- if(dataType()=="Spectra"){
+                predict.amplitude <- if(dataType()=="Spectra"){
                     lucas.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
                 } else if(dataType()=="Net"){
                     lucas.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
@@ -2212,30 +2212,30 @@ shinyServer(function(input, output, session) {
             spectra.line.table <- spectra.line.table[complete.cases(concentration.table[, input$calcurveline]),]
             data <- data[data$Spectrum %in% concentration.table$Spectrum, ]
             
-            predict.intensity <- if(input$normcal==1){
+            predict.amplitude <- if(input$normcal==1){
                 if(dataType()=="Spectra"){
-                    lucas.simp.prep(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=wavelengthlinestouse(), intercept.element.lines=input$intercept_vars)
+                    lucas.simp.prep(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
                 } else if(dataType()=="Net"){
-                    lucas.simp.prep.net(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=wavelengthlinestouse(), intercept.element.lines=input$intercept_vars)
+                    lucas.simp.prep.net(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
                 }
             } else if(input$normcal==2){
-                predict.intensity <- if(dataType()=="Spectra"){
-                    lucas.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=wavelengthlinestouse(), intercept.element.lines=input$intercept_vars)
+                predict.amplitude <- if(dataType()=="Spectra"){
+                    lucas.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
                 } else if(dataType()=="Net"){
-                    lucas.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=wavelengthlinestouse(), intercept.element.lines=input$intercept_vars)
+                    lucas.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
                 }
             } else if(input$normcal==3){
-                predict.intensity <- if(dataType()=="Spectra"){
-                    lucas.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=wavelengthlinestouse(), intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                predict.amplitude <- if(dataType()=="Spectra"){
+                    lucas.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
                 } else if(dataType()=="Net"){
-                    lucas.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=wavelengthlinestouse(), intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                    lucas.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
                 }
             }
             
         }
         
         
-        predict.intensity
+        predict.amplitude
         
         
     })
@@ -2244,12 +2244,12 @@ shinyServer(function(input, output, session) {
     predictFrame <- reactive({
         
         predict.frame <- predictFramePre()
-        predict.intensity <- predictIntensity()
+        predict.amplitude <- predictAmplitude()
         
         
         
-        predict.frame <- data.frame(predict.intensity, predict.frame$Concentration)
-        colnames(predict.frame) <- c(names(predict.intensity), "Concentration")
+        predict.frame <- data.frame(predict.amplitude, predict.frame$Concentration)
+        colnames(predict.frame) <- c(names(predict.amplitude), "Concentration")
         
         
         
@@ -2285,12 +2285,12 @@ shinyServer(function(input, output, session) {
         
         
         if (input$radiocal==1){
-            cal.lm <- lm(Concentration~Intensity, data=predict.frame[ vals$keeprows, , drop = FALSE])
+            cal.lm <- lm(Concentration~Amplitude, data=predict.frame[ vals$keeprows, , drop = FALSE])
         }
         
         
         if (input$radiocal==2){
-            cal.lm <- lm(Concentration~Intensity + I(Intensity^2), data=predict.frame[ vals$keeprows, , drop = FALSE])
+            cal.lm <- lm(Concentration~Amplitude + I(Amplitude^2), data=predict.frame[ vals$keeprows, , drop = FALSE])
         }
         
         if (input$radiocal==3){
@@ -2308,13 +2308,13 @@ shinyServer(function(input, output, session) {
     
     valFrame <- reactive({
         
-        predict.intensity <- predictIntensity()
+        predict.amplitude <- predictAmplitude()
         predict.frame <- predictFrame()
         line.model <- lineModel()
         
         
         if (input$radiocal==1){
-            cal.est.conc.pred <- predict(object=line.model, newdata=predict.intensity, interval='confidence')
+            cal.est.conc.pred <- predict(object=line.model, newdata=predict.amplitude, interval='confidence')
             cal.est.conc.tab <- data.frame(cal.est.conc.pred)
             cal.est.conc <- cal.est.conc.tab$fit
             
@@ -2323,7 +2323,7 @@ shinyServer(function(input, output, session) {
         }
         
         if (input$radiocal==2){
-            cal.est.conc.pred <- predict(object=line.model, newdata=predict.intensity, interval='confidence')
+            cal.est.conc.pred <- predict(object=line.model, newdata=predict.amplitude, interval='confidence')
             cal.est.conc.tab <- data.frame(cal.est.conc.pred)
             cal.est.conc <- cal.est.conc.tab$fit
             
@@ -2340,20 +2340,20 @@ shinyServer(function(input, output, session) {
             for(i in 2:N){dummyDF=rbind(dummyDF,means)}
             xv=seq(xmin,xmax, length.out=N)
             dummyDF$Concentration = xv
-            yv=predict(line.model, newdata=predict.intensity)
+            yv=predict(line.model, newdata=predict.amplitude)
             
             
             lucas.x <- yv
             
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity, interval='confidence')
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
             cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
             cal.est.conc.luc <- cal.est.conc.tab$fit
             cal.est.conc.luc.up <- cal.est.conc.tab$upr
             cal.est.conc.luc.low <- cal.est.conc.tab$lwr
             
             
-            val.frame <- data.frame(predict.frame$Concentration, predict.intensity$Intensity, lucas.x, cal.est.conc.luc, cal.est.conc.luc.up, cal.est.conc.luc.low)
-            colnames(val.frame) <- c("Concentration", "Intensity", "IntensityNorm", "Prediction", "Upper", "Lower")
+            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, lucas.x, cal.est.conc.luc, cal.est.conc.luc.up, cal.est.conc.luc.low)
+            colnames(val.frame) <- c("Concentration", "Amplitude", "AmplitudeNorm", "Prediction", "Upper", "Lower")
         }
         
         if (input$radiocal==4){
@@ -2365,20 +2365,20 @@ shinyServer(function(input, output, session) {
             for(i in 2:N){dummyDF=rbind(dummyDF,means)}
             xv=seq(xmin,xmax, length.out=N)
             dummyDF$Concentration = xv
-            yv=predict(line.model, newdata=predict.intensity)
+            yv=predict(line.model, newdata=predict.amplitude)
             
             
             lucas.x <- yv
             
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity, interval='confidence')
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
             #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
             #cal.est.conc.luc <- cal.est.conc.tab$fit
             #cal.est.conc.luc.up <- cal.est.conc.tab$upr
             #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
             
             
-            val.frame <- data.frame(predict.frame$Concentration, predict.intensity$Intensity, lucas.x, as.vector(cal.est.conc.pred.luc))
-            colnames(val.frame) <- c("Concentration", "Intensity", "IntensityNorm", "Prediction")
+            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, lucas.x, as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "Amplitude", "AmplitudeNorm", "Prediction")
         }
         
         
@@ -2430,15 +2430,15 @@ shinyServer(function(input, output, session) {
         log <- "Log "
         
         
-        intensity.name <- c(element.name, intens)
+        amplitude.name <- c(element.name, intens)
         concentration.name <- c(element.name, conen)
         prediction.name <- c(element.name, predi)
         
         
         if(input$radiocal==1){
-            calcurve.plot <- ggplot(data=predict.frame[ vals$keeprows, , drop = FALSE], aes(Intensity, Concentration)) +
+            calcurve.plot <- ggplot(data=predict.frame[ vals$keeprows, , drop = FALSE], aes(Amplitude, Concentration)) +
             theme_light() +
-            annotate("text", label=lm_eqn(lm(Concentration~Intensity, predict.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            annotate("text", label=lm_eqn(lm(Concentration~Amplitude, predict.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
             geom_point() +
             geom_point(data = predict.frame[!vals$keeprows, , drop = FALSE], shape = 21, fill = "red", color = "black", alpha = 0.25) +
             stat_smooth(method="lm", fullrange = TRUE) +
@@ -2449,9 +2449,9 @@ shinyServer(function(input, output, session) {
         }
         
         if(input$radiocal==2){
-            calcurve.plot <- ggplot(data=predict.frame[ vals$keeprows, , drop = FALSE], aes(Intensity, Concentration)) +
+            calcurve.plot <- ggplot(data=predict.frame[ vals$keeprows, , drop = FALSE], aes(Amplitude, Concentration)) +
             theme_light() +
-            annotate("text", label=lm_eqn_poly(lm(Concentration~Intensity + I(Intensity^2), predict.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            annotate("text", label=lm_eqn_poly(lm(Concentration~Amplitude + I(Amplitude^2), predict.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
             geom_point() +
             geom_point(data = predict.frame[!vals$keeprows, , drop = FALSE], shape = 21, fill = "red", color = "black", alpha = 0.25) +
             stat_smooth(method="lm", formula=y~poly(x,2)) +
@@ -2462,12 +2462,12 @@ shinyServer(function(input, output, session) {
         }
         
         if(input$radiocal==3){
-            calcurve.plot <- ggplot(data=val.frame[ vals$keeprows, , drop = FALSE], aes(IntensityNorm, Concentration)) +
+            calcurve.plot <- ggplot(data=val.frame[ vals$keeprows, , drop = FALSE], aes(AmplitudeNorm, Concentration)) +
             theme_light() +
             annotate("text", label=lm_eqn(lm(Concentration~., val.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
             geom_point() +
-            geom_point(aes(IntensityNorm, Concentration), data = val.frame[!vals$keeprows, , drop = FALSE], shape = 21, fill = "red", color = "black", alpha = 0.25) +
-            geom_smooth(aes(x=IntensityNorm, y=Concentration, ymin = Lower, ymax = Upper)) +
+            geom_point(aes(AmplitudeNorm, Concentration), data = val.frame[!vals$keeprows, , drop = FALSE], shape = 21, fill = "red", color = "black", alpha = 0.25) +
+            geom_smooth(aes(x=AmplitudeNorm, y=Concentration, ymin = Lower, ymax = Upper)) +
             scale_x_continuous(paste(element.name, norma)) +
             scale_y_continuous(paste(element.name, conen)) +
             coord_cartesian(xlim = rangescalcurve$x, ylim = rangescalcurve$y, expand = TRUE)
@@ -2475,11 +2475,11 @@ shinyServer(function(input, output, session) {
         }
         
         if(input$radiocal==4){
-            calcurve.plot <- ggplot(data=val.frame[ vals$keeprows, , drop = FALSE], aes(IntensityNorm, Concentration)) +
+            calcurve.plot <- ggplot(data=val.frame[ vals$keeprows, , drop = FALSE], aes(AmplitudeNorm, Concentration)) +
             theme_light() +
             annotate("text", label=lm_eqn(lm(Concentration~., val.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
             geom_point() +
-            geom_point(aes(IntensityNorm, Concentration), data = val.frame[!vals$keeprows, , drop = FALSE], shape = 21, fill = "red", color = "black", alpha = 0.25) +
+            geom_point(aes(AmplitudeNorm, Concentration), data = val.frame[!vals$keeprows, , drop = FALSE], shape = 21, fill = "red", color = "black", alpha = 0.25) +
             geom_smooth() +
             scale_x_continuous(paste(element.name, norma)) +
             scale_y_continuous(paste(element.name, conen)) +
@@ -2530,7 +2530,7 @@ shinyServer(function(input, output, session) {
         predi <- " Estimate (%)"
         log <- "Log "
         
-        intensity.name <- c(element.name, intens)
+        amplitude.name <- c(element.name, intens)
         concentration.name <- c(element.name, conen)
         prediction.name <- c(element.name, predi)
         val.frame <- valFrame()
@@ -2645,12 +2645,12 @@ shinyServer(function(input, output, session) {
         
         
         if (input$radiocal==1){
-            cal.lm <- lm(Concentration~Intensity, data=predict.frame)
+            cal.lm <- lm(Concentration~Amplitude, data=predict.frame)
         }
         
         
         if (input$radiocal==2){
-            cal.lm <- lm(Concentration~Intensity + I(Intensity^2), data=predict.frame)
+            cal.lm <- lm(Concentration~Amplitude + I(Amplitude^2), data=predict.frame)
         }
         
         if (input$radiocal==3){
@@ -2668,17 +2668,17 @@ shinyServer(function(input, output, session) {
     
     valFrameRandomized <- reactive({
         
-        predict.intensity <- predictIntensity()[ vals$keeprows, , drop = FALSE]
+        predict.amplitude <- predictAmplitude()[ vals$keeprows, , drop = FALSE]
         predict.frame <- predictFrame()[ vals$keeprows, , drop = FALSE]
         
-        predict.intensity <- predict.intensity[!(randomizeData()), , drop = FALSE]
+        predict.amplitude <- predict.amplitude[!(randomizeData()), , drop = FALSE]
         predict.frame <- predict.frame[!(randomizeData()), , drop = FALSE]
         line.model <- lineModelRandom()
         
         
         
         if (input$radiocal==1){
-            cal.est.conc.pred <- predict(object=line.model, newdata=predict.intensity, interval='confidence')
+            cal.est.conc.pred <- predict(object=line.model, newdata=predict.amplitude, interval='confidence')
             cal.est.conc.tab <- data.frame(cal.est.conc.pred)
             cal.est.conc <- cal.est.conc.tab$fit
             
@@ -2687,7 +2687,7 @@ shinyServer(function(input, output, session) {
         }
         
         if (input$radiocal==2){
-            cal.est.conc.pred <- predict(object=line.model, newdata=predict.intensity, interval='confidence')
+            cal.est.conc.pred <- predict(object=line.model, newdata=predict.amplitude, interval='confidence')
             cal.est.conc.tab <- data.frame(cal.est.conc.pred)
             cal.est.conc <- cal.est.conc.tab$fit
             
@@ -2704,20 +2704,20 @@ shinyServer(function(input, output, session) {
             for(i in 2:N){dummyDF=rbind(dummyDF,means)}
             xv=seq(xmin,xmax, length.out=N)
             dummyDF$Concentration = xv
-            yv=predict(line.model, newdata=predict.intensity)
+            yv=predict(line.model, newdata=predict.amplitude)
             
             
             lucas.x <- yv
             
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity, interval='confidence')
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
             cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
             cal.est.conc.luc <- cal.est.conc.tab$fit
             cal.est.conc.luc.up <- cal.est.conc.tab$upr
             cal.est.conc.luc.low <- cal.est.conc.tab$lwr
             
             
-            val.frame <- data.frame(predict.frame$Concentration, predict.intensity$Intensity, lucas.x, cal.est.conc.luc, cal.est.conc.luc.up, cal.est.conc.luc.low)
-            colnames(val.frame) <- c("Concentration", "Intensity", "IntensityNorm", "Prediction", "Upper", "Lower")
+            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, lucas.x, cal.est.conc.luc, cal.est.conc.luc.up, cal.est.conc.luc.low)
+            colnames(val.frame) <- c("Concentration", "Amplitude", "AmplitudeNorm", "Prediction", "Upper", "Lower")
         }
         
         if (input$radiocal==4){
@@ -2729,20 +2729,20 @@ shinyServer(function(input, output, session) {
             for(i in 2:N){dummyDF=rbind(dummyDF,means)}
             xv=seq(xmin,xmax, length.out=N)
             dummyDF$Concentration = xv
-            yv=predict(line.model, newdata=predict.intensity)
+            yv=predict(line.model, newdata=predict.amplitude)
             
             
             lucas.x <- yv
             
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity, interval='confidence')
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
             #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
             #cal.est.conc.luc <- cal.est.conc.tab$fit
             #cal.est.conc.luc.up <- cal.est.conc.tab$upr
             #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
             
             
-            val.frame <- data.frame(predict.frame$Concentration, predict.intensity$Intensity, lucas.x, as.vector(cal.est.conc.pred.luc))
-            colnames(val.frame) <- c("Concentration", "Intensity", "IntensityNorm", "Prediction")
+            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, lucas.x, as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "Amplitude", "AmplitudeNorm", "Prediction")
         }
         
         
@@ -2755,17 +2755,17 @@ shinyServer(function(input, output, session) {
     
     valFrameRandomizedRev <- reactive({
         
-        predict.intensity <- predictIntensity()[ vals$keeprows, , drop = FALSE]
+        predict.amplitude <- predictAmplitude()[ vals$keeprows, , drop = FALSE]
         predict.frame <- predictFrame()[ vals$keeprows, , drop = FALSE]
         
-        predict.intensity <- predict.intensity[(randomizeData()), ]
+        predict.amplitude <- predict.amplitude[(randomizeData()), ]
         predict.frame <- predict.frame[(randomizeData()), ]
         line.model <- lineModelRandom()
         
         
         
         if (input$radiocal==1){
-            cal.est.conc.pred <- predict(object=line.model, newdata=predict.intensity, interval='confidence')
+            cal.est.conc.pred <- predict(object=line.model, newdata=predict.amplitude, interval='confidence')
             cal.est.conc.tab <- data.frame(cal.est.conc.pred)
             cal.est.conc <- cal.est.conc.tab$fit
             
@@ -2774,7 +2774,7 @@ shinyServer(function(input, output, session) {
         }
         
         if (input$radiocal==2){
-            cal.est.conc.pred <- predict(object=line.model, newdata=predict.intensity, interval='confidence')
+            cal.est.conc.pred <- predict(object=line.model, newdata=predict.amplitude, interval='confidence')
             cal.est.conc.tab <- data.frame(cal.est.conc.pred)
             cal.est.conc <- cal.est.conc.tab$fit
             
@@ -2791,20 +2791,20 @@ shinyServer(function(input, output, session) {
             for(i in 2:N){dummyDF=rbind(dummyDF,means)}
             xv=seq(xmin,xmax, length.out=N)
             dummyDF$Concentration = xv
-            yv=predict(line.model, newdata=predict.intensity)
+            yv=predict(line.model, newdata=predict.amplitude)
             
             
             lucas.x <- yv
             
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity, interval='confidence')
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
             cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
             cal.est.conc.luc <- cal.est.conc.tab$fit
             cal.est.conc.luc.up <- cal.est.conc.tab$upr
             cal.est.conc.luc.low <- cal.est.conc.tab$lwr
             
             
-            val.frame <- data.frame(predict.frame$Concentration, predict.intensity$Intensity, lucas.x, cal.est.conc.luc, cal.est.conc.luc.up, cal.est.conc.luc.low)
-            colnames(val.frame) <- c("Concentration", "Intensity", "IntensityNorm", "Prediction", "Upper", "Lower")
+            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, lucas.x, cal.est.conc.luc, cal.est.conc.luc.up, cal.est.conc.luc.low)
+            colnames(val.frame) <- c("Concentration", "Amplitude", "AmplitudeNorm", "Prediction", "Upper", "Lower")
         }
         
         if (input$radiocal==4){
@@ -2816,17 +2816,17 @@ shinyServer(function(input, output, session) {
             for(i in 2:N){dummyDF=rbind(dummyDF,means)}
             xv=seq(xmin,xmax, length.out=N)
             dummyDF$Concentration = xv
-            yv=predict(line.model, newdata=predict.intensity)
+            yv=predict(line.model, newdata=predict.amplitude)
             
             
             lucas.x <- yv
             
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity, interval='confidence')
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
             
             
             
-            val.frame <- data.frame(predict.frame$Concentration, predict.intensity$Intensity, lucas.x, as.vector(cal.est.conc.pred.luc))
-            colnames(val.frame) <- c("Concentration", "Intensity", "IntensityNorm", "Prediction")
+            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, lucas.x, as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "Amplitude", "AmplitudeNorm", "Prediction")
         }
         
         
@@ -2853,13 +2853,13 @@ shinyServer(function(input, output, session) {
         conen <- " (%)"
         predi <- " Estimate (%)"
         
-        intensity.name <- c(element.name, intens)
+        amplitude.name <- c(element.name, intens)
         concentration.name <- c(element.name, conen)
         prediction.name <- c(element.name, predi)
         
         
         if(input$radiocal==1){
-            calcurve.plot <- ggplot(data=predict.frame, aes(Intensity, Concentration)) +
+            calcurve.plot <- ggplot(data=predict.frame, aes(Amplitude, Concentration)) +
             theme_light() +
             annotate("text", label=lm_eqn(line.model), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
             geom_point() +
@@ -2873,7 +2873,7 @@ shinyServer(function(input, output, session) {
         
         if(input$radiocal==2){
             
-            calcurve.plot <- ggplot(data=predict.frame, aes(Intensity, Concentration)) +
+            calcurve.plot <- ggplot(data=predict.frame, aes(Amplitude, Concentration)) +
             theme_light() +
             annotate("text", label=lm_eqn_poly(line.model), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
             geom_point() +
@@ -2887,12 +2887,12 @@ shinyServer(function(input, output, session) {
         if(input$radiocal==3){
             val.frame <- valFrameRandomizedRev()
             
-            calcurve.plot <- ggplot(data=val.frame, aes(IntensityNorm, Concentration)) +
+            calcurve.plot <- ggplot(data=val.frame, aes(AmplitudeNorm, Concentration)) +
             theme_light() +
             annotate("text", label=lm_eqn(line.model), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
             geom_point() +
-            geom_point(aes(IntensityNorm, Concentration), data = val.frame, shape = 21, fill = "red", color = "black", alpha = 0.25) +
-            geom_smooth(aes(x=IntensityNorm, y=Concentration, ymin = Lower, ymax = Upper)) +
+            geom_point(aes(AmplitudeNorm, Concentration), data = val.frame, shape = 21, fill = "red", color = "black", alpha = 0.25) +
+            geom_smooth(aes(x=AmplitudeNorm, y=Concentration, ymin = Lower, ymax = Upper)) +
             scale_x_continuous(paste(element.name, norma)) +
             scale_y_continuous(paste(element.name, conen)) +
             coord_cartesian(xlim = rangescalcurverandom$x, ylim = rangescalcurverandom$y, expand = TRUE)
@@ -2901,11 +2901,11 @@ shinyServer(function(input, output, session) {
         if(input$radiocal==4){
             val.frame <- valFrameRandomizedRev()
             
-            calcurve.plot <- ggplot(data=val.frame, aes(IntensityNorm, Concentration)) +
+            calcurve.plot <- ggplot(data=val.frame, aes(AmplitudeNorm, Concentration)) +
             theme_light() +
             annotate("text", label=lm_eqn(lm(Concentration~., val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
             geom_point() +
-            geom_point(aes(IntensityNorm, Concentration), data = val.frame, shape = 21, fill = "red", color = "black", alpha = 0.25) +
+            geom_point(aes(AmplitudeNorm, Concentration), data = val.frame, shape = 21, fill = "red", color = "black", alpha = 0.25) +
             geom_smooth() +
             scale_x_continuous(paste(element.name, norma)) +
             scale_y_continuous(paste(element.name, conen)) +
@@ -2950,7 +2950,7 @@ shinyServer(function(input, output, session) {
         conen <- " (%)"
         predi <- " Estimate (%)"
         
-        intensity.name <- c(element.name, intens)
+        amplitude.name <- c(element.name, intens)
         concentration.name <- c(element.name, conen)
         prediction.name <- c(element.name, predi)
         
@@ -3849,7 +3849,7 @@ shinyServer(function(input, output, session) {
         
         spectra.line.table <- waveSubset()
         
-        cal.vector <- wavelengthlinestouse()
+        cal.vector <- Wavenumberlinestouse()
         cal.vector2 <- cal.vector[2:length(cal.vector)]
         cal.list <- as.list(cal.vector2)
         setNames(cal.list, cal.vector2)

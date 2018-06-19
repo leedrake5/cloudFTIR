@@ -30,10 +30,10 @@ headerPanel("FTIR Spectrum Viewer"),
 sidebarLayout(
 sidebarPanel(
 
-tags$style(type="text/css",
-".shiny-output-error { visibility: hidden; }",
-".shiny-output-error:before { visibility: hidden; }"
-),
+#tags$style(type="text/css",
+#".shiny-output-error { visibility: hidden; }",
+#".shiny-output-error:before { visibility: hidden; }"
+#),
 
 
 textInput('projectname', label = "Project Name", value="myFTIR"),
