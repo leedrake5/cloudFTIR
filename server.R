@@ -156,7 +156,7 @@ shinyServer(function(input, output, session) {
     })
     
     
-    observeEvent(!is.null(input$file1), {
+    observeEvent(!is.null(input$file1) | !is.null(input$calfileinput), {
         
 
         myData <- reactive({
@@ -175,7 +175,12 @@ shinyServer(function(input, output, session) {
   
 
         dataHold <- reactive({
-            data <- myData()
+            data <- if(input$usecalfile==FALSE){
+                myData()
+            } else if(input$usecalfile==TRUE){
+                calFileContents()[["Spectra"]]
+            }
+            
     
             data <- data[order(as.character(data$Spectrum)),]
     
@@ -772,74 +777,21 @@ shinyServer(function(input, output, session) {
 
     
     waveInputCal <- reactive({
+
         
-        #elements <- Wavenumberlinestouse()
-        
-        
-        
-        
-        spectra.line.table <- dataManipulate()
-        
-        
-        hold.frame <- waveInput()
-        
-        
-        value.frame <- calFileContents()$Values
-        
-        #anna <- rbind(hold.frame, value.frame)
-        
-        #temp.table <- data.table(anna)[,list(result = sum(result)), elements]
-        
-        #as.data.frame(temp.table)
-        
-        #element.matches <- elements[elements %in% ls(value.frame)]
-        
-        #merge_Sum(.df1=hold.frame, .df2=value.frame, .id_Columns="Spectrum",  .match_Columns=element.matches)
-        
-        
-        #data.frame(calFileContents()$Values, hold.frame[,! names(hold.frame) %in% names(calFileContents()$Values)])
-        
-        hold.frame.reduced <- hold.frame[2:length(hold.frame)]
-        value.frame.reduced <- if(colnames(calFileContents()$Values)[1]=="Spectrum"){
-            value.frame[2:length(value.frame)]
-        }else if(colnames(calFileContents()$Values)[1]=="Include"){
-            value.frame[3:length(value.frame)]
-        }
-        
-        rownames(hold.frame.reduced) <- hold.frame$Spectrum
-        rownames(value.frame.reduced) <- value.frame$Spectrum
-        
-        
-        hotable.new = hold.frame.reduced %>% add_rownames %>%
-        full_join(value.frame.reduced %>% add_rownames) %>%
-        group_by(rowname) %>%
-        summarise_all(funs(sum(., na.rm = FALSE)))
-        
-        colnames(hotable.new)[1] <- "Spectrum"
-        
-        hotable.new$Spectrum <- gsub(".pdz", "", hotable.new$Spectrum)
-        hotable.new$Spectrum <- gsub(".csv", "", hotable.new$Spectrum)
-        hotable.new$Spectrum <- gsub(".CSV", "", hotable.new$Spectrum)
-        hotable.new$Spectrum <- gsub(".spt", "", hotable.new$Spectrum)
-        hotable.new$Spectrum <- gsub(".mca", "", hotable.new$Spectrum)
-        hotable.new$Spectrum <- gsub(".spx", "", hotable.new$Spectrum)
-        
-        hotable.new
-        
+       calFileContents()[["Definitions"]]
+       
         
     })
     
     waveTableInput <- reactive({
         
         
-        #if(input$usecalfile==FALSE){
-        #    waveInput()
-        #}else if(input$usecalfile==TRUE){
-        #    waveInputCal()
-        #}
-        
-        result <- waveInput()
-        result
+        if(input$usecalfile==FALSE){
+            waveInput()
+        }else if(input$usecalfile==TRUE){
+            waveInputCal()
+        }
 
     })
     
@@ -954,70 +906,7 @@ shinyServer(function(input, output, session) {
     
     hotableInputCal <- reactive({
         
-        lines <- Wavenumberlinestouse()
-        
-        
-        
-        
-        spectra.line.table <- if(input$filetype=="Opus"){
-            waveSubset()
-        } else if(input$filetype=="DPT"){
-            waveSubset()
-        }  else if(input$filetype=="CSV"){
-            waveSubset()
-        }
-        
-        empty.line.table <- spectra.line.table[,elements] * 0.0000
-        
-        #empty.line.table$Spectrum <- spectra.line.table$Spectrum
-        
-        hold.frame <- data.frame(spectra.line.table$Spectrum, empty.line.table)
-        colnames(hold.frame) <- c("Spectrum", elements)
-        
-        hold.frame <- as.data.frame(hold.frame)
-        
-        
-        value.frame <- calFileContents()$Values
-        
-        #anna <- rbind(hold.frame, value.frame)
-        
-        #temp.table <- data.table(anna)[,list(result = sum(result)), elements]
-        
-        #as.data.frame(temp.table)
-        
-        #element.matches <- elements[elements %in% ls(value.frame)]
-        
-        #merge_Sum(.df1=hold.frame, .df2=value.frame, .id_Columns="Spectrum",  .match_Columns=element.matches)
-        
-        
-        #data.frame(calFileContents()$Values, hold.frame[,! names(hold.frame) %in% names(calFileContents()$Values)])
-        
-        hold.frame.reduced <- hold.frame[2:length(hold.frame)]
-        value.frame.reduced <- if(colnames(calFileContents()$Values)[1]=="Spectrum"){
-            value.frame[2:length(value.frame)]
-        }else if(colnames(calFileContents()$Values)[1]=="Include"){
-            value.frame[3:length(value.frame)]
-        }
-        
-        rownames(hold.frame.reduced) <- hold.frame$Spectrum
-        rownames(value.frame.reduced) <- value.frame$Spectrum
-        
-        
-        hotable.new = hold.frame.reduced %>% add_rownames %>%
-        full_join(value.frame.reduced %>% add_rownames) %>%
-        group_by(rowname) %>%
-        summarise_all(funs(sum(., na.rm = FALSE)))
-        
-        colnames(hotable.new)[1] <- "Spectrum"
-        
-        hotable.new$Spectrum <- gsub(".pdz", "", hotable.new$Spectrum)
-        hotable.new$Spectrum <- gsub(".csv", "", hotable.new$Spectrum)
-        hotable.new$Spectrum <- gsub(".CSV", "", hotable.new$Spectrum)
-        hotable.new$Spectrum <- gsub(".spt", "", hotable.new$Spectrum)
-        hotable.new$Spectrum <- gsub(".mca", "", hotable.new$Spectrum)
-        hotable.new$Spectrum <- gsub(".spx", "", hotable.new$Spectrum)
-        
-        hotable.new
+        calFileContents()[["Values"]]
         
         
     })
@@ -1321,8 +1210,8 @@ shinyServer(function(input, output, session) {
         #30, 35
         #35, 40
         
-        mins <- c(0.7, 2.5, 11.0, 18.4, 19.5, 21, 30, 35)
-        maxs <- c(0.9, 2.8, 11.2, 19.4, 22, 22, 35, 40)
+        mins <- c(3500, 3000, 2500, 2250, 2000, 1750)
+        maxs <- c(4000, 3500, 3000, 2500, 2250, 2000)
         
         norm.list <- list(mins, maxs)
         names(norm.list) <- c("Min", "Max")
@@ -1371,7 +1260,7 @@ shinyServer(function(input, output, session) {
         }
         
         comp.bic <- if(dataType()=="Spectra"){
-            optimal_norm_chain(data=data, element=element, spectra.line.table=spectra.line.table, values=concentration.table, possible.mins=norm.list[["Min"]], possible.maxs=norm.list[["Max"]])
+            optimal_norm_chain(data=data, element=line, spectra.line.table=spectra.line.table, values=concentration.table, possible.mins=norm.list[["Min"]], possible.maxs=norm.list[["Max"]])
         } else if(dataType()=="Net"){
             time.bic
         }
