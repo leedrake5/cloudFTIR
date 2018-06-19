@@ -21,6 +21,9 @@ library(TTR)
 library(peakPick)
 library(soil.spec)
 library(parallel)
+library(caret)
+library(randomForest)
+pdf(NULL)
 
 options(warn=-1)
 assign("last.warning", NULL, envir = baseenv())
@@ -1127,7 +1130,7 @@ shinyServer(function(input, output, session) {
     
     Wavenumberlinestouse <- reactive({
         
-        wavevalues[["DF"]]$Name
+        as.vector(wavevalues[["DF"]]$Name)
         
     })
     
@@ -1156,7 +1159,7 @@ shinyServer(function(input, output, session) {
         
         
         if(is.null(myelements)){
-            paste("Ca.K.alpha")
+            NULL
         }else{
             myelements
         }
@@ -1171,7 +1174,7 @@ shinyServer(function(input, output, session) {
         
         
         if(is.null(mylines)){
-            paste("Ca.K.alpha")
+            NULL
         }else{
             mylines[! mylines %in% c(input$calcurveline)]
         }
@@ -2124,6 +2127,8 @@ shinyServer(function(input, output, session) {
         
         spectra.line.table <- spectraLineTable()[spectraLineTable()$Spectrum %in% holdFrame()$Spectrum, ]
         
+        lines <- names(spectra.line.table[,-1])
+        
         
         if (input$radiocal==1){
             
@@ -2218,21 +2223,21 @@ shinyServer(function(input, output, session) {
             
             predict.amplitude <- if(input$normcal==1){
                 if(dataType()=="Spectra"){
-                    lucas.simp.prep(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
+                    lucas.simp.prep(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars)
                 } else if(dataType()=="Net"){
-                    lucas.simp.prep.net(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
+                    lucas.simp.prep.net(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars)
                 }
             } else if(input$normcal==2){
                 predict.amplitude <- if(dataType()=="Spectra"){
-                    lucas.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
+                    lucas.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars)
                 } else if(dataType()=="Net"){
-                    lucas.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
+                    lucas.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars)
                 }
             } else if(input$normcal==3){
                 predict.amplitude <- if(dataType()=="Spectra"){
-                    lucas.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                    lucas.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
                 } else if(dataType()=="Net"){
-                    lucas.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                    lucas.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
                 }
             }
             
