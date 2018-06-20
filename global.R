@@ -14,6 +14,7 @@ library(DT)
 library(XML)
 library(soil.spec)
 library(parallel)
+library(caret)
 
 my.cores <- if(parallel::detectCores()>=3){
                 paste0(parallel::detectCores()-2)
@@ -181,7 +182,58 @@ ftir_parse <- function(range.table, data){
     Reduce(function(...) merge(..., all=T), selected.list)
 }
 
+###Train Functions
 
+pull_test <- function(a.vector, a.value.position){
+    
+    scaled <- scale(a.vector)[,1]
+    
+    value <- scaled[a.value.position]
+    scale.vector <- scaled[-a.value.position]
+    
+    ZScore <- (value-mean(scale.vector))/sd(scale.vector)
+    pvalue <- pnorm(-abs(ZScore))
+    is.sig <- pvalue < 0.05
+    
+    data.frame(Value=a.vector[a.value.position], ZScore=ZScore, pvalue=pvalue, Sig=is.sig)
+}
+
+
+Z_frame <- function(a.vector){
+    
+    do.call("rbind", lapply(seq(1, length(a.vector), 1), function(x) pull_test(a.vector, x)))
+}
+
+
+Z_choose <- function(a.vector){
+    
+    full <- Z_frame(a.vector)
+    full[full$Sig,]
+    
+}
+
+variable_select <- function(amplitudes, values, analyte){
+    
+    control <- trainControl(method="cv", number=5)
+    seed <- 7
+    metric <- "RMSE"
+    set.seed(seed)
+    
+    cal.table <- data.frame(amplitudes, Concentration=values[,analyte])
+    fit.lm <- train(Concentration~., data=cal.table, method="lm", metric=metric, preProc=c("center", "scale"), trControl=control)
+    importance <- varImp(fit.lm, scale=FALSE)
+    importance.frame <- as.data.frame(importance$importance)
+    elements <- rownames(importance$importance)
+    elements[as.numeric(rownames(Z_choose(importance.frame$Overall)))]
+    
+}
+
+
+variable_select_short <- function(importance){
+    importance.frame <- as.data.frame(importance$importance)
+    lines <- rownames(importance$importance)
+    lines[as.numeric(rownames(Z_choose(importance.frame$Overall)))]
+}
 
 
 
@@ -884,18 +936,10 @@ lucas.simp.prep <- function(spectra.line.table, element.line, slope.element.line
     
     
     
-    predict.frame.luk <- data.frame(((1+Amplitude/(Amplitude+lucas.intercept))-lucas.intercept/(Amplitude+lucas.intercept)),lucas.slope)
-    colnames(predict.frame.luk) <- c("Amplitude", names(lucas.slope))
+    predict.frame.luk <- data.frame(Amplitude=((1+Amplitude/(Amplitude+lucas.intercept))-lucas.intercept/(Amplitude+lucas.intercept)),lucas.slope)
+
     
-    predict.frame.luk <- data.frame(((1+Amplitude/(Amplitude+lucas.intercept)-lucas.intercept/(Amplitude+lucas.intercept))),lucas.slope)
-    colnames(predict.frame.luk) <- c("Amplitude", names(lucas.slope))
-    
-    
-    
-    predict.amplitude.luk <- data.frame(predict.frame.luk$Amplitude, lucas.slope)
-    colnames(predict.amplitude.luk) <- c("Amplitude", names(lucas.slope))
-    
-    predict.amplitude.luk
+    predict.frame.luk
     
     
 }
@@ -935,8 +979,7 @@ lucas.tc.prep <- function(data, spectra.line.table, element.line, slope.element.
     
     
     
-    predict.amplitude.luc.tc <- data.frame(((1+Amplitude/(Amplitude+lucas.intercept.tc)-lucas.intercept.tc/(Amplitude+lucas.intercept.tc))),lucas.slope.tc)
-    colnames(predict.amplitude.luc.tc) <- c("Amplitude", names(lucas.slope.tc))
+    predict.amplitude.luc.tc <- data.frame(Amplitude=((1+Amplitude/(Amplitude+lucas.intercept.tc)-lucas.intercept.tc/(Amplitude+lucas.intercept.tc))),lucas.slope.tc)
     
     
     predict.amplitude.luc.tc
@@ -984,16 +1027,10 @@ lucas.comp.prep <- function(data, spectra.line.table, element.line, slope.elemen
     colnames(lucas.slope.comp) <- slope.element.lines
     
     
-    predict.frame.luc.comp <- data.frame(((1+Amplitude/compton.frame.ag$Compton)/(Amplitude/compton.frame.ag$Compton+lucas.intercept.comp)-lucas.intercept.comp/(Amplitude/compton.frame.ag$Compton+lucas.intercept.comp)),lucas.slope.comp)
-    colnames(predict.frame.luc.comp) <- c("Amplitude", names(lucas.slope.comp))
+    predict.frame.luc.comp <- data.frame(Amplitude=((1+Amplitude/compton.frame.ag$Compton)/(Amplitude/compton.frame.ag$Compton+lucas.intercept.comp)-lucas.intercept.comp/(Amplitude/compton.frame.ag$Compton+lucas.intercept.comp)),lucas.slope.comp)
     
     
-    
-    predict.amplitude.luc.comp <- data.frame(predict.frame.luc.comp$Amplitude, lucas.slope.comp)
-    colnames(predict.amplitude.luc.comp) <- c("Amplitude", names(lucas.slope.comp))
-    
-    
-    predict.amplitude.luc.comp
+    predict.frame.luc.comp
 }
 
 
@@ -1235,19 +1272,19 @@ in_range <- function(spectrum, peak, pritable){
 
 create.frame.slopes <- function(element, slopes, values, intensities){
     values <- values[complete.cases(values[,element]),]
-    intensities <- intensities[complete.cases(values[,element]),]
+    amplitudes <- intensities[complete.cases(values[,element]),]
     
     data.frame(Value=values[,element],
-    Intensity=intensities[,"Intensity"],
-    intensities[,slopes])
+    Amplitude=amplitudes[,"Amplitude"],
+    amplitudes[,slopes])
     
 }
 
 create.frame.intercepts <- function(element, slopes, values, intensities){
     
     data.frame(Value=values[,element],
-    Intensity=intensities[,"Intensity"],
-    intensities[,slopes])
+    Amplitude=amplitudes[,"Amplitude"],
+    amplitudes[,slopes])
     
 }
 
@@ -1259,7 +1296,7 @@ optimal_r_chain <- function(element, intensities, values, possible.slopes, keep)
     intensities <- intensities[complete.cases(values[,element]),]
     index <- seq(1, length(possible.slopes), 1)
     
-    chain.lm <- pbapply::pblapply(possible.slopes, function(x) lm(Value~Intensity+., data=create.frame.slopes(element=element, slopes=x, values=values[keep,], intensities=intensities)[keep,]))
+    chain.lm <- pbapply::pblapply(possible.slopes, function(x) lm(Value~Amplitude+., data=create.frame.slopes(element=element, slopes=x, values=values[keep,], intensities=intensities)[keep,]))
     
     #chain.predict <- pblapply(index, function(x) predict(object=chain.lm[[x]], newdata=create.frame.slopes(element=element, slopes=possible.slopes[[x]], values=values[keep,], intensities=intensities)[keep,], interval='confidence'))
     #chain.fits <- pblapply(chain.predict, function(x) data.frame(x)$fit)
@@ -1273,7 +1310,7 @@ optimal_r_chain <- function(element, intensities, values, possible.slopes, keep)
     coef <- data.frame(best$coefficients)
     best.var <- rownames(coef)[3:length(rownames(coef))]
     
-    simple.lm <- lm(Value~Intensity, data=create.frame.slopes(element=element, slopes=element, values=values, intensities=intensities)[keep,])
+    simple.lm <- lm(Value~Amplitude, data=create.frame.slopes(element=element, slopes=element, values=values, intensities=intensities)[keep,])
     #simple.predict <- as.data.frame(predict(simple.lm, newdata=create.frame.slopes(element=element, slopes=element, values=values[keep,], intensities=intensities)[keep,], interval='confidence'), interval='confidence')$fit
     #simple.val <- lm(values[,element]~simple.predict)
     simple.aic <- extractAIC(simple.lm, k=log(length(1)))[2]
@@ -1292,7 +1329,7 @@ optimal_norm_chain <- function(data, element, spectra.line.table, values, possib
     
     index <- seq(1, length(possible.mins), 1)
     
-    chain.lm <- pbapply::pblapply(index, function(x) lm(values[,element]~simple.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=element, norm.min=possible.mins[x], norm.max=possible.maxs[x])$Intensity, na.action=na.exclude))
+    chain.lm <- pbapply::pblapply(index, function(x) lm(values[,element]~simple.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=element, norm.min=possible.mins[x], norm.max=possible.maxs[x])$Amplitude, na.action=na.exclude))
     aic <- lapply(chain.lm, function(x) extractAIC(x, k=log(length(1)))[2])
     best <- index[[which.min(unlist(aic))]]
     
@@ -1305,7 +1342,7 @@ optimal_norm_chain <- function(data, element, spectra.line.table, values, possib
 optimal_intercept_chain <- function(element, intensities, values, keep){
     
     
-    chain.lm <- pbapply::pblapply(intensities, function(x) lm(values[,element]~Intensity, data=x[keep,]))
+    chain.lm <- pbapply::pblapply(intensities, function(x) lm(values[,element]~Amplitude, data=x[keep,]))
     aic <- lapply(chain.lm, function(x) extractAIC(x, k=log(1))[2])
     best <- chain.lm[[which.min(unlist(aic))]]
     coef <- data.frame(best$coefficients)

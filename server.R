@@ -1000,7 +1000,10 @@ shinyServer(function(input, output, session) {
     
     Wavenumberlinestouse <- reactive({
         
-        as.vector(wavevalues[["DF"]]$Name)
+        table <- wavevalues[["DF"]]
+        table <- table[complete.cases(table),]
+        
+        as.vector(table$Name)
         
     })
     
@@ -1464,6 +1467,7 @@ shinyServer(function(input, output, session) {
         
         concentration.table <- concentration.table[complete.cases(concentration.table[,input$calcurveline]),]
         
+        choices <- Wavenumberlinestouse()
         
         
         spectra.line.table <- spectraLineTable()[spectraLineTable()$Spectrum %in% holdFrame()$Spectrum, ]
@@ -1477,19 +1481,19 @@ shinyServer(function(input, output, session) {
         
         cal.table <- if(dataType()=="Spectra"){
             if(input$normcal==1){
-                lucas.simp.prep(spectra.line.table=spectra.line.table, element.line=input$calcurveelemenet,slope.element.lines=colnames(spectra.line.table[,-1]), intercept.element.lines=input$intercept_vars)
+                lucas.simp.prep(spectra.line.table=spectra.line.table, element.line=input$calcurveelemenet,slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             } else if(input$normcal==2){
-                lucas.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=colnames(spectra.line.table[,-1]), intercept.element.lines=input$intercept_vars)
+                lucas.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             } else if(input$normcal==3){
-                lucas.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=colnames(spectra.line.table[,-1]), intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                lucas.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=choices, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
             }
         } else if(dataType()=="Net"){
             if(input$normcal==1){
-                lucas.simp.prep.net(spectra.line.table=spectra.line.table, element.line=input$calcurveelemenet,slope.element.lines=colnames(spectra.line.table[,-1]), intercept.element.lines=input$intercept_vars)
+                lucas.simp.prep.net(spectra.line.table=spectra.line.table, element.line=input$calcurveelemenet,slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             } else if(input$normcal==2){
-                lucas.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=colnames(spectra.line.table[,-1]), intercept.element.lines=input$intercept_vars)
+                lucas.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             } else if(input$normcal==3){
-                lucas.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=colnames(spectra.line.table[,-1]), intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                lucas.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=choices, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
             }
         }
         
@@ -1568,7 +1572,7 @@ shinyServer(function(input, output, session) {
         
         #spectra.line.table <- spectra.line.table[spectra.line.table$Spectrum %in% concentration.table$Spectrum, ]
         
-        spectra.line.table <- spectra.line.table[complete.cases(concentration.table[, element]),]
+        spectra.line.table <- spectra.line.table[complete.cases(concentration.table[, line]),]
         
         data <- data[data$Spectrum %in% concentration.table$Spectrum, ]
         
