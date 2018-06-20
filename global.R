@@ -182,6 +182,27 @@ ftir_parse <- function(range.table, data){
     Reduce(function(...) merge(..., all=T), selected.list)
 }
 
+
+spectra_frame <- function(spectra){
+    
+    data <- reshape2::dcast(spectra, Spectrum~Wavenumber)
+    
+    #test <- apply(test, 2, as.numeric)
+    colnames(data) <- make.names(colnames(data))
+    data[complete.cases(data),]
+}
+
+
+spectra_table <- function(spectra, concentration){
+    
+    data <- reshape2::dcast(spectra, Spectrum~Wavenumber)
+    data$Concentration <- concentration
+    
+    #test <- apply(test, 2, as.numeric)
+    colnames(data) <- make.names(colnames(data))
+    data[complete.cases(data),]
+}
+
 ###Train Functions
 
 pull_test <- function(a.vector, a.value.position){
@@ -837,6 +858,33 @@ lucas.comp <- function(data, concentration.table, spectra.line.table, element.li
 ###############
 ###Prep Data###
 ###############
+
+
+spectra_frame <- function(spectra){
+    
+    data <- reshape2::dcast(spectra, Spectrum~Wavenumber)
+    
+    #test <- apply(test, 2, as.numeric)
+    colnames(data) <- make.names(colnames(data))
+    data[complete.cases(data),]
+}
+
+
+spectra_table <- function(spectra, concentration){
+    
+    data <- reshape2::dcast(spectra, Spectrum~Wavenumber)
+    data$Concentration <- concentration
+    
+    #test <- apply(test, 2, as.numeric)
+    colnames(data) <- make.names(colnames(data))
+    data[complete.cases(data),]
+}
+
+
+
+
+
+
 
 
 ###############

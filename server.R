@@ -1718,7 +1718,8 @@ shinyServer(function(input, output, session) {
         predict.frame.simp <- predict.frame[,c("Concentration", "Amplitude")]
         predict.frame.luc <- predict.frame[, c("Concentration", "Amplitude", input$slope_vars)]
         predict.frame.forest <- predict.frame
-        
+        predict.frame.rainforest <- spectra_table(spectra=data, concentration=concentration.table[,input$calcurveline])
+
         
         cal.lm.simp <- lm(Concentration~Amplitude, data=predict.frame.simp, na.action=na.exclude)
         
@@ -1731,8 +1732,11 @@ shinyServer(function(input, output, session) {
         forest.predict <- predict(cal.lm.forest, new.data=predict.frame.forest, proximity=FALSE)
         forest.sum <- lm(predict.frame$Concentration~forest.predict, na.action=na.exclude)
         
+        cal.lm.rainforest <-randomForest(Concentration~., data=predict.frame.rainforest[,-1], na.action=na.omit)
+        rainforest.predict <- predict(cal.lm.rainforest, new.data=predict.frame.rainforest, proximity=FALSE)
+        rainforest.sum <- lm(predict.frame.rainforest$Concentration~rainforest.predict, na.action=na.exclude)
         
-        r2.vector <- c(summary(cal.lm.simp)$adj.r.squared, summary(cal.lm.two)$adj.r.squared-.5, summary(cal.lm.luc)$adj.r.squared, summary(forest.sum)$adj.r.squared)
+        r2.vector <- c(summary(cal.lm.simp)$adj.r.squared, summary(cal.lm.two)$adj.r.squared-.5, summary(cal.lm.luc)$adj.r.squared, summary(forest.sum)$adj.r.squared, summary(rainforest.sum)$adj.r.squared)
         which.max(r2.vector)
         
         
@@ -1793,7 +1797,7 @@ shinyServer(function(input, output, session) {
     output$calTypeInput <- renderUI({
         
         selectInput("radiocal", label = "Calibration Curve",
-        choices = list("Linear" = 1, "Non-Linear" = 2, "Lucas-Tooth" = 3, "Forest" = 4),
+        choices = list("Linear" = 1, "Non-Linear" = 2, "Lucas-Tooth" = 3, "Forest" = 4, "Rainforest"=5),
         selected = calTypeSelection())
         
         
@@ -2122,6 +2126,12 @@ shinyServer(function(input, output, session) {
             
         }
         
+        if (input$radiocal==5){
+            predict.amplitude <- spectra_frame(spectra=dataNorm())[,-1]
+        }
+
+        
+        
         
         predict.amplitude
         
@@ -2158,6 +2168,8 @@ shinyServer(function(input, output, session) {
         
     })
     
+
+    
     
     
     calCurveFrame <- reactive({
@@ -2186,6 +2198,10 @@ shinyServer(function(input, output, session) {
         }
         
         if (input$radiocal==4){
+            cal.lm <- randomForest(Concentration~., data=predict.frame[ vals$keeprows, , drop = FALSE], na.action=na.omit)
+        }
+        
+        if (input$radiocal==5){
             cal.lm <- randomForest(Concentration~., data=predict.frame[ vals$keeprows, , drop = FALSE], na.action=na.omit)
         }
         
@@ -2270,6 +2286,31 @@ shinyServer(function(input, output, session) {
         }
         
         
+        if (input$radiocal==5){
+            xmin = 0; xmax=10
+            N = length(predict.frame$Concentration)
+            means = colMeans(predict.amplitude)
+            dummyDF = t(as.data.frame(means))
+            for(i in 2:N){dummyDF=rbind(dummyDF,means)}
+            xv=seq(xmin,xmax, length.out=N)
+            dummyDF$Concentration = xv
+            yv=predict(line.model, newdata=predict.amplitude)
+            
+            
+            lucas.x <- yv
+            
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
+            #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
+            #cal.est.conc.luc <- cal.est.conc.tab$fit
+            #cal.est.conc.luc.up <- cal.est.conc.tab$upr
+            #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
+            
+            
+            val.frame <- data.frame(predict.frame$Concentration, lucas.x, as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "AmplitudeNorm", "Prediction")
+        }
+        
+        
         
         
         val.frame
@@ -2294,6 +2335,8 @@ shinyServer(function(input, output, session) {
             3
         } else if(input$radiocal==4){
             3
+        } else if(input$radiocal==5){
+            5
         }
         
     })
@@ -2363,6 +2406,19 @@ shinyServer(function(input, output, session) {
         }
         
         if(input$radiocal==4){
+            calcurve.plot <- ggplot(data=val.frame[ vals$keeprows, , drop = FALSE], aes(AmplitudeNorm, Concentration)) +
+            theme_light() +
+            annotate("text", label=lm_eqn(lm(Concentration~., val.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            geom_point() +
+            geom_point(aes(AmplitudeNorm, Concentration), data = val.frame[!vals$keeprows, , drop = FALSE], shape = 21, fill = "red", color = "black", alpha = 0.25) +
+            geom_smooth() +
+            scale_x_continuous(paste(element.name, norma)) +
+            scale_y_continuous(paste(element.name, conen)) +
+            coord_cartesian(xlim = rangescalcurve$x, ylim = rangescalcurve$y, expand = TRUE)
+            
+        }
+        
+        if(input$radiocal==5){
             calcurve.plot <- ggplot(data=val.frame[ vals$keeprows, , drop = FALSE], aes(AmplitudeNorm, Concentration)) +
             theme_light() +
             annotate("text", label=lm_eqn(lm(Concentration~., val.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
@@ -2526,6 +2582,8 @@ shinyServer(function(input, output, session) {
         
     })
     
+
+    
     
     lineModelRandom <- reactive({
         
@@ -2546,6 +2604,10 @@ shinyServer(function(input, output, session) {
         }
         
         if (input$radiocal==4){
+            cal.lm <- randomForest(Concentration~., data=predict.frame, na.action=na.omit)
+        }
+        
+        if (input$radiocal==5){
             cal.lm <- randomForest(Concentration~., data=predict.frame, na.action=na.omit)
         }
         
@@ -2634,6 +2696,32 @@ shinyServer(function(input, output, session) {
         }
         
         
+        if (input$radiocal==5){
+            
+            xmin = 0; xmax=10
+            N = length(predict.frame$Concentration)
+            means = colMeans(predict.amplitude)
+            dummyDF = t(as.data.frame(means))
+            for(i in 2:N){dummyDF=rbind(dummyDF,means)}
+            xv=seq(xmin,xmax, length.out=N)
+            dummyDF$Concentration = xv
+            yv=predict(line.model, newdata=predict.amplitude)
+
+            
+            lucas.x <- yv
+            
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
+            #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
+            #cal.est.conc.luc <- cal.est.conc.tab$fit
+            #cal.est.conc.luc.up <- cal.est.conc.tab$upr
+            #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
+            
+            
+            val.frame <- data.frame(predict.frame$Concentration, lucas.x, as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "AmplitudeNorm", "Prediction")
+        }
+        
+        
         
         
         val.frame
@@ -2717,6 +2805,28 @@ shinyServer(function(input, output, session) {
             colnames(val.frame) <- c("Concentration", "Amplitude", "AmplitudeNorm", "Prediction")
         }
         
+        if (input$radiocal==5){
+            
+            xmin = 0; xmax=10
+            N = length(predict.frame$Concentration)
+            means = colMeans(predict.frame)
+            dummyDF = t(as.data.frame(means))
+            for(i in 2:N){dummyDF=rbind(dummyDF,means)}
+            xv=seq(xmin,xmax, length.out=N)
+            dummyDF$Concentration = xv
+            yv=predict(line.model, newdata=predict.amplitude)
+
+            
+            lucas.x <- yv
+            
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
+            
+            
+            
+            val.frame <- data.frame(predict.frame$Concentration, lucas.x, as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "AmplitudeNorm", "Prediction")
+        }
+        
         
         
         
@@ -2787,6 +2897,20 @@ shinyServer(function(input, output, session) {
         }
         
         if(input$radiocal==4){
+            val.frame <- valFrameRandomizedRev()
+            
+            calcurve.plot <- ggplot(data=val.frame, aes(AmplitudeNorm, Concentration)) +
+            theme_light() +
+            annotate("text", label=lm_eqn(lm(Concentration~., val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            geom_point() +
+            geom_point(aes(AmplitudeNorm, Concentration), data = val.frame, shape = 21, fill = "red", color = "black", alpha = 0.25) +
+            geom_smooth() +
+            scale_x_continuous(paste(element.name, norma)) +
+            scale_y_continuous(paste(element.name, conen)) +
+            coord_cartesian(xlim = rangescalcurverandom$x, ylim = rangescalcurverandom$y, expand = TRUE)
+        }
+        
+        if(input$radiocal==5){
             val.frame <- valFrameRandomizedRev()
             
             calcurve.plot <- ggplot(data=val.frame, aes(AmplitudeNorm, Concentration)) +
@@ -2881,9 +3005,13 @@ shinyServer(function(input, output, session) {
     # Float over info
     output$hover_infocal <- renderUI({
         
-        point.table <- if(calType()!=3){
+        point.table <- if(calType()==3){
+            calCurveFrame()
+        } else if(calType()==2){
             calCurveFrame()
         } else if(calType()==3) {
+            calValFrame()
+        } else if(calType()==5) {
             calValFrame()
         }
         
@@ -2931,10 +3059,14 @@ shinyServer(function(input, output, session) {
     # Float over info
     output$hover_infocal_random <- renderUI({
         
-        point.table <- if(calType()!=3){
+        point.table <- if(calType()==3){
+            calCurveFrame()
+        } else if(calType()==2){
             calCurveFrame()
         } else if(calType()==3) {
-            valFrame()
+            calValFrame()
+        } else if(calType()==5) {
+            calValFrame()
         }
         
         randomized <- randomizeData()
@@ -2991,9 +3123,13 @@ shinyServer(function(input, output, session) {
     # Toggle points that are clicked
     observeEvent(input$plot_cal_click, {
         
-        predict.frame <- if(calType()!=3){
+        predict.frame <- if(calType()==3){
+            calCurveFrame()
+        } else if(calType()==2){
             calCurveFrame()
         } else if(calType()==3) {
+            calValFrame()
+        } else if(calType()==5) {
             calValFrame()
         }
         
@@ -3006,9 +3142,13 @@ shinyServer(function(input, output, session) {
     # Toggle points that are brushed, when button is clicked
     observeEvent(input$exclude_toggle, {
         
-        predict.frame <- if(calType()!=3){
+        predict.frame <- if(calType()==3){
+            calCurveFrame()
+        } else if(calType()==2){
             calCurveFrame()
         } else if(calType()==3) {
+            calValFrame()
+        } else if(calType()==5) {
             calValFrame()
         }
         res <- brushedPoints(predict.frame, input$plot_cal_brush, allRows = TRUE)
@@ -3019,9 +3159,13 @@ shinyServer(function(input, output, session) {
     # Reset all points
     observeEvent(input$exclude_reset, {
         
-        predict.frame <- if(calType()!=3){
+        predict.frame <- if(calType()==3){
+            calCurveFrame()
+        } else if(calType()==2){
             calCurveFrame()
         } else if(calType()==3) {
+            calValFrame()
+        } else if(calType()==5) {
             calValFrame()
         }
         vals$keeprows <- rep(TRUE, nrow(predict.frame))
@@ -3227,9 +3371,15 @@ shinyServer(function(input, output, session) {
     
     modelFrame <- reactive({
         
-        if(input$radiocal!=4){
+        if(input$radiocal==1){
+            normalLM()
+        } else if(input$radiocal==2){
+            normalLM()
+        } else if(input$radiocal==3){
             normalLM()
         } else if(input$radiocal==4){
+            forestLM()
+        } else if(input$radiocal==5){
             forestLM()
         }
         
