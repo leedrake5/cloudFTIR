@@ -2127,14 +2127,28 @@ shinyServer(function(input, output, session) {
         }
         
         if (input$radiocal==5){
-            predict.amplitude <- spectra_frame(spectra=dataNorm())[,-1]
+            if(input$normcal==1){
+                predict.amplitude <- if(dataType()=="Spectra"){
+                    spectra.simp.prep(spectra=dataNorm())[,-1]
+                } else if(dataType()=="Net"){
+                    NULL
+                }
+            } else if(input$normcal==2){
+                predict.amplitude <- if(dataType()=="Spectra"){
+                    spectra.tc.prep(spectra=dataNorm())[,-1]
+                } else if(dataType()=="Net"){
+                    NULL
+                }
+            } else if(input$normcal==3){
+                predict.amplitude <- if(dataType()=="Spectra"){
+                    spectra.comp.prep(spectra=dataNorm(), norm.min=input$comptonmin, norm.max=input$comptonmax)[,-1]
+                } else if(dataType()=="Net"){
+                    NULL
+                }
+            }
         }
-
-        
-        
         
         predict.amplitude
-        
         
     })
     

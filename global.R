@@ -860,6 +860,11 @@ lucas.comp <- function(data, concentration.table, spectra.line.table, element.li
 ###############
 
 
+###############
+###Raw Spectra##
+###############
+
+
 spectra_frame <- function(spectra){
     
     data <- reshape2::dcast(spectra, Spectrum~Wavenumber)
@@ -880,16 +885,54 @@ spectra_table <- function(spectra, concentration){
     data[complete.cases(data),]
 }
 
+spectra.simp.prep <- function(spectra){
+    
+    data <- reshape2::dcast(spectra, Spectrum~Wavenumber)
+    
+    #test <- apply(test, 2, as.numeric)
+    colnames(data) <- make.names(colnames(data))
+    data[complete.cases(data),]
+    
+}
+
+spectra.tc.prep <- function(spectra){
+    
+    
+    data <- reshape2::dcast(spectra, Spectrum~Wavenumber)
+    
+    #test <- apply(test, 2, as.numeric)
+    colnames(data) <- make.names(colnames(data))
+    data <- data[complete.cases(data),]
+    
+    total.counts <- colSums(data=data[,-1], na.rm=TRUE)
+    
+    data.frame(Spectrum=data$Spectrum, data[,-1]/total.counts)
+    
+}
+
+spectra.comp.prep <- function(spectra, norm.min, norm.max){
+    
+    compton.norm <- subset(spectra$Amplitude, !(spectra$Wavenumber < norm.min | spectra$Wavenumber > norm.max))
+    compton.file <- subset(spectra$Spectrum, !(spectra$Wavenumber < norm.min | spectra$Wavenumber > norm.max))
+    compton.frame <- data.frame(is.0(compton.norm, compton.file))
+    colnames(compton.frame) <- c("Compton", "Spectrum")
+    compton.frame.ag <- aggregate(list(compton.frame$Compton), by=list(compton.frame$Spectrum), FUN="sum")
+    colnames(compton.frame.ag) <- c("Spectrum", "Compton")
+    
+    data <- reshape2::dcast(spectra, Spectrum~Wavenumber)
+    
+    #test <- apply(test, 2, as.numeric)
+    colnames(data) <- make.names(colnames(data))
+    
+    data <- data.frame(Spectrum=data$Spectrum, data[,-1]/compton.frame.ag$Compton)
+    data[complete.cases(data),]
+    
+}
 
 
 
 
 
-
-
-###############
-###Raw Spectra##
-###############
 
 
 general.prep <- function(spectra.line.table, element.line) {
