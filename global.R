@@ -1,4 +1,4 @@
-list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "broom", "shinyjs", "gridExtra", "dtplyr", "formattable", "XML", "corrplot", "scales", "rmarkdown", "markdown", "peakPick", "shinyWidgets", "soil.spec")
+list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "broom", "shinyjs", "gridExtra", "dtplyr", "formattable", "XML", "corrplot", "scales", "rmarkdown", "markdown", "peakPick", "shinyWidgets", "soil.spec", "data.table")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 #if(length(new.packages)) install.packages(new.packages)
 
@@ -15,6 +15,7 @@ library(XML)
 library(soil.spec)
 library(parallel)
 library(caret)
+library(data.table)
 
 my.cores <- if(parallel::detectCores()>=3){
                 paste0(parallel::detectCores()-2)
@@ -144,7 +145,7 @@ readCSVData <- function(filepath, filename){
 
 readOpusData <- function(filepath, filename){
     
-    filename <- gsub(".0", "", filename)
+    filename <- make.names(filename)
     
     alldata <- soil.spec::read.opus(file=filepath)
     
@@ -861,7 +862,7 @@ lucas.comp <- function(data, concentration.table, spectra.line.table, element.li
 
 
 ###############
-###Raw Spectra##
+###Full Spectra##
 ###############
 
 
@@ -885,28 +886,42 @@ spectra_table <- function(spectra, concentration){
     data[complete.cases(data),]
 }
 
+
+
+
 spectra.simp.prep <- function(spectra){
     
-    data <- reshape2::dcast(spectra, Spectrum~Wavenumber)
+    spectra$Energy <- round(spectra$Wavenumber, 0)
+    spectra <- data.table(spectra)
+    spectra.aggregate <- spectra[, list(Amplitude=mean(Amplitude, na.rm = TRUE)), by = list(Spectrum,Wavenumber)]
+    
+    data <- as.data.frame(dcast.data.table(spectra.aggregate, Spectrum~Wavenumber, value.var="Amplitude"))
     
     #test <- apply(test, 2, as.numeric)
     colnames(data) <- make.names(colnames(data))
-    data[complete.cases(data),]
+    do.call(data.frame,lapply(data, function(x) replace(x, is.infinite(x),0)))
     
 }
 
 spectra.tc.prep <- function(spectra){
     
+    spectra$Energy <- round(spectra$Wavenumber, 0)
     
-    data <- reshape2::dcast(spectra, Spectrum~Wavenumber)
+    spectra <- data.table(spectra)
+    spectra.aggregate <- spectra[, list(Amplitude=mean(Amplitude, na.rm = TRUE)), by = list(Spectrum,Wavenumber)]
+    
+    data <- as.data.frame(dcast.data.table(spectra.aggregate, Spectrum~Wavenumber, value.var="Amplitude"))
     
     #test <- apply(test, 2, as.numeric)
     colnames(data) <- make.names(colnames(data))
     data <- data[complete.cases(data),]
     
-    total.counts <- colSums(data=data[,-1], na.rm=TRUE)
+    total.counts <- rowSums(data[,-1], na.rm=TRUE)
     
-    data.frame(Spectrum=data$Spectrum, data[,-1]/total.counts)
+    data <- data.frame(Spectrum=data$Spectrum, data[,-1]/total.counts)
+    do.call(data.frame,lapply(data, function(x) replace(x, is.infinite(x),0)))
+    
+    
     
 }
 
@@ -919,19 +934,30 @@ spectra.comp.prep <- function(spectra, norm.min, norm.max){
     compton.frame.ag <- aggregate(list(compton.frame$Compton), by=list(compton.frame$Spectrum), FUN="sum")
     colnames(compton.frame.ag) <- c("Spectrum", "Compton")
     
-    data <- reshape2::dcast(spectra, Spectrum~Wavenumber)
+    spectra$Wavenumber <- round(spectra$Wavenumber, 0)
     
+    spectra <- data.table(spectra)
+    spectra.aggregate <- spectra[, list(Amplitude=mean(Amplitude, na.rm = TRUE)), by = list(Spectrum,Wavenumber)]
+    
+    data <- as.data.frame(dcast.data.table(spectra.aggregate, Spectrum~Wavenumber, value.var="Amplitude"))
     #test <- apply(test, 2, as.numeric)
     colnames(data) <- make.names(colnames(data))
     
     data <- data.frame(Spectrum=data$Spectrum, data[,-1]/compton.frame.ag$Compton)
-    data[complete.cases(data),]
+    do.call(data.frame,lapply(data, function(x) replace(x, is.infinite(x),0)))
     
 }
 
 
 
+###############
+###Prep Data###
+###############
 
+
+###############
+###Raw Spectra##
+###############
 
 
 

@@ -187,7 +187,7 @@ shinyServer(function(input, output, session) {
             data$Spectrum <- gsub(".dpt", "", data$Spectrum)
             data$Spectrum <- gsub(".csv", "", data$Spectrum)
             data$Spectrum <- gsub(".CSV", "", data$Spectrum)
-            data$Spectrum <- gsub(".0", "", data$Spectrum)
+            #data$Spectrum <- gsub(".0", "", data$Spectrum)
 
             data
     
@@ -1189,7 +1189,7 @@ shinyServer(function(input, output, session) {
         
         if(input$usecalfile==FALSE && is.null(calList[[optionhold]])==TRUE){
             calConditons[["CalTable"]][["Max"]]
-        }else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==TRUE && is.null(calFileContents()$calList[[optionhold]])==FALSE){
+        } else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==TRUE && is.null(calFileContents()$calList[[optionhold]])==FALSE){
             calFileContents()$calList[[optionhold]][[1]]$CalTable$Max
         } else if(input$usecalfile==FALSE && is.null(calList[[optionhold]])==FALSE){
             calList[[optionhold]][[1]]$CalTable$Max
@@ -1514,12 +1514,40 @@ shinyServer(function(input, output, session) {
         
     })
     
-    output$importanceplot <- renderPlot({
-        
-        plot(slopeImportance())
-        
-    })
+
+rainForestImportance <- reactive({
     
+    
+    as.data.frame(importance(lineModel()))
+    
+})
+
+rainForestImportancePlot <- reactive({
+    
+    
+    importance.frame <- rainForestImportance()
+    colnames(importance.frame) <- c("NodePurity")
+    importance.frame$Wavenumber <- as.numeric(gsub("X", "", rownames(importance.frame)))
+    
+    ggplot(importance.frame) +
+    geom_line(aes(Wavenumber, NodePurity)) +
+    theme_light() +
+    scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")))
+
+    
+})
+
+
+
+output$importanceplot <- renderPlot({
+    
+    if(calType()!=5){
+        plot(slopeImportance())
+    } else if(calType()==5){
+        rainForestImportancePlot()
+    }
+    
+})
     
     
     fishVector <- reactive({
@@ -3073,7 +3101,7 @@ shinyServer(function(input, output, session) {
     # Float over info
     output$hover_infocal_random <- renderUI({
         
-        point.table <- if(calType()==3){
+        point.table <- if(calType()==1){
             calCurveFrame()
         } else if(calType()==2){
             calCurveFrame()
@@ -3137,7 +3165,7 @@ shinyServer(function(input, output, session) {
     # Toggle points that are clicked
     observeEvent(input$plot_cal_click, {
         
-        predict.frame <- if(calType()==3){
+        predict.frame <- if(calType()==1){
             calCurveFrame()
         } else if(calType()==2){
             calCurveFrame()
@@ -3156,7 +3184,7 @@ shinyServer(function(input, output, session) {
     # Toggle points that are brushed, when button is clicked
     observeEvent(input$exclude_toggle, {
         
-        predict.frame <- if(calType()==3){
+        predict.frame <- if(calType()==1){
             calCurveFrame()
         } else if(calType()==2){
             calCurveFrame()
@@ -3173,7 +3201,7 @@ shinyServer(function(input, output, session) {
     # Reset all points
     observeEvent(input$exclude_reset, {
         
-        predict.frame <- if(calType()==3){
+        predict.frame <- if(calType()==1){
             calCurveFrame()
         } else if(calType()==2){
             calCurveFrame()
