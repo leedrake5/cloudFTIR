@@ -1596,7 +1596,7 @@ output$hover_info_variable <- renderUI({
     )
 })
 
-output$downloadPlot <- downloadHandler(
+output$variablePlot <- downloadHandler(
 filename = function() { paste0(input$projectname, '_Variables', '.jpg', sep='') },
 content = function(file) {
     ggsave(file,variablesPlot(), width=14, height=8, device="jpeg")
