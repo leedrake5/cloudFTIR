@@ -410,7 +410,7 @@ shinyServer(function(input, output, session) {
             
             n <- seq(from=1, to=length(peakTable()[,1]), by=1)
             
-            table.list <- pblapply(n, function(x) in_range(spectrum=peakTable()$Spectrum[x],peak=peakTable()$Wavenumber[x], pritable=pritable))
+            table.list <- pblapply(n, function(x) in_range_ftir(spectrum=peakTable()$Spectrum[x],peak=peakTable()$Wavenumber[x], pritable=pritable))
             
             data <- do.call(rbind, table.list)
             
@@ -1251,15 +1251,15 @@ shinyServer(function(input, output, session) {
         
         
         time.bic <- if(dataType()=="Spectra"){
-            extractAIC(lm(concentration.table[, input$calcurveline]~general.prep(spectra.line.table, input$calcurveline)$Amplitude, na.action=na.exclude), k=log(length(1)))[2]
+            extractAIC(lm(concentration.table[, input$calcurveline]~general_prep_ftir(spectra.line.table, input$calcurveline)$Amplitude, na.action=na.exclude), k=log(length(1)))[2]
         } else if(dataType()=="Net"){
-            extractAIC(lm(concentration.table[, input$calcurveline]~general.prep.net(spectra.line.table, input$calcurveline)$Amplitude, na.action=na.exclude), k=log(length(1)))[2]
+            extractAIC(lm(concentration.table[, input$calcurveline]~general_prep_ftir_net(spectra.line.table, input$calcurveline)$Amplitude, na.action=na.exclude), k=log(length(1)))[2]
         }
         
         tc.bic <- if(dataType()=="Spectra"){
-            extractAIC(lm(concentration.table[, input$calcurveline]~simple.tc.prep(data, spectra.line.table, input$calcurveline)$Amplitude, na.action=na.exclude), k=log(length(1)))[2]
+            extractAIC(lm(concentration.table[, input$calcurveline]~simple_tc_prep_ftir(data, spectra.line.table, input$calcurveline)$Amplitude, na.action=na.exclude), k=log(length(1)))[2]
         } else if(dataType()=="Net"){
-            extractAIC(lm(concentration.table[, input$calcurveline]~simple.tc.prep.net(data, spectra.line.table, input$calcurveline)$Amplitude, na.action=na.exclude), k=log(length(1)))[2]
+            extractAIC(lm(concentration.table[, input$calcurveline]~simple_tc_prep_ftir_net(data, spectra.line.table, input$calcurveline)$Amplitude, na.action=na.exclude), k=log(length(1)))[2]
         }
         
         comp.bic <- if(dataType()=="Spectra"){
@@ -1406,14 +1406,14 @@ shinyServer(function(input, output, session) {
         
         
         predict.amplitude.list <- if(input$normcal==1){
-            pblapply(cephlopodVector(), function(x) lucas.simp.prep(spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=line, intercept.element.lines=c(line, x)))
+            pblapply(cephlopodVector(), function(x) lucas_simp_prep_ftir(spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=line, intercept.element.lines=c(line, x)))
         } else if(input$normcal==2){
-            pblapply(cephlopodVector(), function(x) lucas.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=line, intercept.element.lines=c(line, x)))
+            pblapply(cephlopodVector(), function(x) lucas_tc_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=line, intercept.element.lines=c(line, x)))
         } else if(input$normcal==3){
-            pblapply(cephlopodVector(), function(x) lucas.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=line, intercept.element.lines=c(line, x), norm.min=input$comptonmin, norm.max=input$comptonmax))
+            pblapply(cephlopodVector(), function(x) lucas_comp_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=line, intercept.element.lines=c(line, x), norm.min=input$comptonmin, norm.max=input$comptonmax))
         }
         
-        optimal_intercept_chain(element=line, intensities=predict.amplitude.list, values=concentration.table, keep=vals$keeprows)
+        optimal_intercept_chain_ftir(element=line, amplitudes=predict.amplitude.list, values=concentration.table, keep=vals$keeprows)
         
         
     })
@@ -1481,19 +1481,19 @@ shinyServer(function(input, output, session) {
         
         cal.table <- if(dataType()=="Spectra"){
             if(input$normcal==1){
-                lucas.simp.prep(spectra.line.table=spectra.line.table, element.line=input$calcurveelemenet,slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
+                lucas_simp_prep_ftir(spectra.line.table=spectra.line.table, element.line=input$calcurveelemenet,slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             } else if(input$normcal==2){
-                lucas.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
+                lucas_tc_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             } else if(input$normcal==3){
-                lucas.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=choices, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                lucas_comp_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=choices, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
             }
         } else if(dataType()=="Net"){
             if(input$normcal==1){
-                lucas.simp.prep.net(spectra.line.table=spectra.line.table, element.line=input$calcurveelemenet,slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
+                lucas_simp_prep_ftir_net(spectra.line.table=spectra.line.table, element.line=input$calcurveelemenet,slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             } else if(input$normcal==2){
-                lucas.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
+                lucas_tc_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             } else if(input$normcal==3){
-                lucas.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=choices, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                lucas_comp_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=choices, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
             }
         }
         
@@ -1663,27 +1663,27 @@ content = function(file) {
         
         predict.amplitude <- if(input$normcal==1){
             if(dataType()=="Spectra"){
-                lucas.simp.prep(spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
+                lucas_simp_prep_ftir(spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             } else if(dataType()=="Net"){
-                lucas.simp.prep.net(spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
+                lucas_simp_prep_ftir_net(spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             }
         } else if(input$normcal==2){
             predict.amplitude <- if(dataType()=="Spectra"){
-                lucas.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
+                lucas_tc_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             } else if(dataType()=="Net"){
-                lucas.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
+                lucas_tc_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             }
         } else if(input$normcal==3){
             predict.amplitude <- if(dataType()=="Spectra"){
-                lucas.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                lucas_comp_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
             } else if(dataType()=="Net"){
-                lucas.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                lucas_comp_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=line, slope.element.lines=choices, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
             }
         }
         
         
         
-        #optimal_r_chain(element=element, intensities=predict.amplitude, values= concentration.table, possible.slopes=fishVector(), keep=vals$keeprows)
+        #optimal_r_chain_ftir(element=element, amplitudes=predict.amplitude, values= concentration.table, possible.slopes=fishVector(), keep=vals$keeprows)
         
         results <- variable_select_short(slopeImportance())
         
@@ -1770,21 +1770,21 @@ content = function(file) {
         
         predict.amplitude <- if(input$normcal==1){
             if(dataType()=="Spectra"){
-                lucas.simp.prep(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
+                lucas_simp_prep_ftir(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
             } else if(dataType()=="Net"){
-                lucas.simp.prep.net(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
+                lucas_simp_prep_ftir_net(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
             }
         } else if(input$normcal==2){
             predict.amplitude <- if(dataType()=="Spectra"){
-                lucas.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
+                lucas_tc_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
             } else if(dataType()=="Net"){
-                lucas.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
+                lucas_tc_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars)
             }
         } else if(input$normcal==3){
             predict.amplitude <- if(dataType()=="Spectra"){
-                lucas.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                lucas_comp_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
             } else if(dataType()=="Net"){
-                lucas.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                lucas_comp_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=Wavenumberlinestouse(), intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
             }
         }
         
@@ -2099,25 +2099,25 @@ content = function(file) {
             
             if(input$normcal==1){
                 predict.amplitude <- if(dataType()=="Spectra"){
-                    general.prep(spectra.line.table=spectra.line.table, element.line=input$calcurveline)
+                    general_prep_ftir(spectra.line.table=spectra.line.table, element.line=input$calcurveline)
                 } else if(dataType()=="Net"){
-                    general.prep.net(spectra.line.table=spectra.line.table, element.line=input$calcurveline)
+                    general_prep_ftir_net(spectra.line.table=spectra.line.table, element.line=input$calcurveline)
                 }
             }
             
             if(input$normcal==2){
                 predict.amplitude <- if(dataType()=="Spectra"){
-                    simple.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline)
+                    simple_tc_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline)
                 } else if(dataType()=="Net"){
-                    simple.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline)
+                    simple_tc_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline)
                 }
             }
             
             if(input$normcal==3){
                 predict.amplitude <- if(dataType()=="Spectra"){
-                    simple.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                    simple_comp_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, norm.min=input$comptonmin, norm.max=input$comptonmax)
                 } else if(dataType()=="Net"){
-                    simple.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                    simple_comp_prep_ftir_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, norm.min=input$comptonmin, norm.max=input$comptonmax)
                 }
             }
             
@@ -2127,25 +2127,25 @@ content = function(file) {
             
             if(input$normcal==1){
                 predict.amplitude <- if(dataType()=="Spectra"){
-                    general.prep(spectra.line.table=spectra.line.table, element.line=input$calcurveline)
+                    general_prep_ftir(spectra.line.table=spectra.line.table, element.line=input$calcurveline)
                 } else if(dataType()=="Net"){
-                    general.prep.net(spectra.line.table=spectra.line.table, element.line=input$calcurveline)
+                    general_prep_ftir_net(spectra.line.table=spectra.line.table, element.line=input$calcurveline)
                 }
             }
             
             if(input$normcal==2){
                 predict.amplitude <- if(dataType()=="Spectra"){
-                    simple.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline)
+                    simple_tc_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline)
                 } else if(dataType()=="Net"){
-                    simple.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline)
+                    simple_tc_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline)
                 }
             }
             
             if(input$normcal==3){
                 predict.amplitude <- if(dataType()=="Spectra"){
-                    simple.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                    simple_comp_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, norm.min=input$comptonmin, norm.max=input$comptonmax)
                 } else if(dataType()=="Net"){
-                    simple.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                    simple_comp_prep_ftir_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, norm.min=input$comptonmin, norm.max=input$comptonmax)
                 }
             }
             
@@ -2156,25 +2156,25 @@ content = function(file) {
             
             if(input$normcal==1){
                 predict.amplitude <- if(dataType()=="Spectra"){
-                    lucas.simp.prep(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars)
+                    lucas_simp_prep_ftir(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars)
                 } else if(dataType()=="Net"){
-                    lucas.simp.prep.net(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars)
+                    lucas_simp_prep_ftir_net(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars)
                 }
             }
             
             if(input$normcal==2){
                 predict.amplitude <- if(dataType()=="Spectra"){
-                    lucas.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars)
+                    lucas_tc_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars)
                 } else if(dataType()=="Net"){
-                    lucas.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars)
+                    lucas_tc_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars)
                 }
             }
             
             if(input$normcal==3){
                 predict.amplitude <- if(dataType()=="Spectra"){
-                    lucas.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                    lucas_comp_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
                 } else if(dataType()=="Net"){
-                    lucas.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                    lucas_comp_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
                 }
             }
             
@@ -2188,21 +2188,21 @@ content = function(file) {
             
             predict.amplitude <- if(input$normcal==1){
                 if(dataType()=="Spectra"){
-                    lucas.simp.prep(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars)
+                    lucas_simp_prep_ftir(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars)
                 } else if(dataType()=="Net"){
-                    lucas.simp.prep.net(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars)
+                    lucas_simp_prep_ftir_net(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars)
                 }
             } else if(input$normcal==2){
                 predict.amplitude <- if(dataType()=="Spectra"){
-                    lucas.tc.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars)
+                    lucas_tc_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars)
                 } else if(dataType()=="Net"){
-                    lucas.tc.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars)
+                    lucas_tc_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars)
                 }
             } else if(input$normcal==3){
                 predict.amplitude <- if(dataType()=="Spectra"){
-                    lucas.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                    lucas_comp_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
                 } else if(dataType()=="Net"){
-                    lucas.comp.prep.net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
+                    lucas_comp_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
                 }
             }
             
@@ -2211,19 +2211,19 @@ content = function(file) {
         if (input$radiocal==5){
             if(input$normcal==1){
                 predict.amplitude <- if(dataType()=="Spectra"){
-                    spectra.simp.prep(spectra=dataNorm())[,-1]
+                    spectra_simp_prep_ftir(spectra=dataNorm())[,-1]
                 } else if(dataType()=="Net"){
                     NULL
                 }
             } else if(input$normcal==2){
                 predict.amplitude <- if(dataType()=="Spectra"){
-                    spectra.tc.prep(spectra=dataNorm())[,-1]
+                    spectra_tc_prep_ftir(spectra=dataNorm())[,-1]
                 } else if(dataType()=="Net"){
                     NULL
                 }
             } else if(input$normcal==3){
                 predict.amplitude <- if(dataType()=="Spectra"){
-                    spectra.comp.prep(spectra=dataNorm(), norm.min=input$comptonmin, norm.max=input$comptonmax)[,-1]
+                    spectra_comp_prep_ftir(spectra=dataNorm(), norm.min=input$comptonmin, norm.max=input$comptonmax)[,-1]
                 } else if(dataType()=="Net"){
                     NULL
                 }
@@ -4375,6 +4375,8 @@ content = function(file) {
                     3
                 } else if(the.cal[[element]][[1]]$CalTable$CalType==4){
                     4
+                } else if(the.cal[[element]][[1]]$CalTable$CalType==5){
+                    5
                 }
                 
             }
@@ -4385,7 +4387,7 @@ content = function(file) {
             if(valDataType()=="Spectra" && cal_type(x)==1 && the.cal[[x]][[1]]$CalTable$NormType==1){
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=general.prep(
+                newdata=general_prep_ftir(
                 spectra.line.table=as.data.frame(
                 count.table
                 ),
@@ -4394,7 +4396,7 @@ content = function(file) {
             } else if(valDataType()=="Spectra" && cal_type(x)==1 && the.cal[[x]][[1]]$CalTable$NormType==2) {
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=simple.tc.prep(
+                newdata=simple_tc_prep_ftir(
                 data=valdata,
                 spectra.line.table=as.data.frame(
                 count.table
@@ -4405,7 +4407,7 @@ content = function(file) {
             } else if(valDataType()=="Spectra" && cal_type(x)==1 && the.cal[[x]][[1]]$CalTable$NormType==3) {
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=simple.comp.prep(
+                newdata=simple_comp_prep_ftir(
                 data=valdata,
                 spectra.line.table=as.data.frame(
                 count.table
@@ -4418,7 +4420,7 @@ content = function(file) {
             } else if(valDataType()=="Spectra" && cal_type(x)==3 && the.cal[[x]][[1]]$CalTable$NormType==1){
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=lucas.simp.prep(
+                newdata=lucas_simp_prep_ftir(
                 spectra.line.table=as.data.frame(
                 count.table
                 ),
@@ -4430,7 +4432,7 @@ content = function(file) {
             } else if(valDataType()=="Spectra" && cal_type(x)==3 && the.cal[[x]][[1]]$CalTable$NormType==2){
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=lucas.tc.prep(
+                newdata=lucas_tc_prep_ftir(
                 data=valdata,
                 spectra.line.table=as.data.frame(
                 count.table
@@ -4443,7 +4445,7 @@ content = function(file) {
             } else if(valDataType()=="Spectra" && cal_type(x)==3 && the.cal[[x]][[1]]$CalTable$NormType==3){
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=lucas.comp.prep(
+                newdata=lucas_comp_prep_ftir(
                 data=valdata,
                 spectra.line.table=as.data.frame(
                 count.table
@@ -4458,7 +4460,7 @@ content = function(file) {
             } else if(valDataType()=="Spectra" && cal_type(x)==4 && the.cal[[x]][[1]]$CalTable$NormType==1){
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=lucas.simp.prep(
+                newdata=lucas_simp_prep_ftir(
                 spectra.line.table=as.data.frame(
                 count.table
                 ),
@@ -4470,7 +4472,7 @@ content = function(file) {
             } else if(valDataType()=="Spectra" && cal_type(x)==4 && the.cal[[x]][[1]]$CalTable$NormType==2){
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=lucas.tc.prep(
+                newdata=lucas_tc_prep_ftir(
                 data=valdata,
                 spectra.line.table=as.data.frame(
                 count.table
@@ -4483,7 +4485,7 @@ content = function(file) {
             } else if(valDataType()=="Spectra" && cal_type(x)==4 && the.cal[[x]][[1]]$CalTable$NormType==3){
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=lucas.comp.prep(
+                newdata=lucas_comp_prep_ftir(
                 data=valdata,
                 spectra.line.table=as.data.frame(
                 count.table
@@ -4495,10 +4497,27 @@ content = function(file) {
                 norm.max=the.cal[[x]][[1]][1]$CalTable$Max
                 )
                 )
+            } else if(valDataType()=="Spectra" && cal_type(x)==5 && the.cal[[x]][[1]]$CalTable$NormType==1){
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=spectra_simp_prep_ftir(valdata)[,-1]
+                )
+            } else if(valDataType()=="Spectra" && cal_type(x)==5 && the.cal[[x]][[1]]$CalTable$NormType==2){
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=spectra_tc_prep_ftir(valdata)[,-1]
+                )
+            } else if(valDataType()=="Spectra" && cal_type(x)==5 && the.cal[[x]][[1]]$CalTable$NormType==3){
+                predict(
+                object=the.cal[[x]][[2]],
+                newdata=spectra_comp_prep_ftir(valdata,
+                norm.min=the.cal[[x]][[1]][1]$CalTable$Min,
+                norm.max=the.cal[[x]][[1]][1]$CalTable$Max)[,-1]
+                )
             } else if(valDataType()=="Net" && cal_type(x)==1 && the.cal[[x]][[1]]$CalTable$NormType==1){
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=general.prep.net(
+                newdata=general_prep_ftir_net(
                 spectra.line.table=as.data.frame(
                 count.table
                 ),
@@ -4507,7 +4526,7 @@ content = function(file) {
             } else if(valDataType()=="Net" && cal_type(x)==1 && the.cal[[x]][[1]]$CalTable$NormType==2) {
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=simple.tc.prep.net(
+                newdata=simple_tc_prep_ftir_net(
                 data=valdata,
                 spectra.line.table=as.data.frame(
                 count.table
@@ -4518,7 +4537,7 @@ content = function(file) {
             } else if(valDataType()=="Net" && cal_type(x)==1 && the.cal[[x]][[1]]$CalTable$NormType==3) {
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=simple.comp.prep.net(
+                newdata=simple_comp_prep_ftir_ftir(
                 data=valdata,
                 spectra.line.table=as.data.frame(
                 count.table
@@ -4531,7 +4550,7 @@ content = function(file) {
             } else if(valDataType()=="Net" && cal_type(x)==3 && the.cal[[x]][[1]]$CalTable$NormType==1){
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=lucas.simp.prep.net(
+                newdata=lucas_simp_prep_ftir_net(
                 spectra.line.table=as.data.frame(
                 count.table
                 ),
@@ -4543,7 +4562,7 @@ content = function(file) {
             } else if(valDataType()=="Net" && cal_type(x)==3 && the.cal[[x]][[1]]$CalTable$NormType==2){
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=lucas.tc.prep.net(
+                newdata=lucas_tc_prep_ftir_net(
                 data=valdata,
                 spectra.line.table=as.data.frame(
                 count.table
@@ -4556,7 +4575,7 @@ content = function(file) {
             } else if(valDataType()=="Net" && cal_type(x)==3 && the.cal[[x]][[1]]$CalTable$NormType==3){
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=lucas.comp.prep.net(
+                newdata=lucas_comp_prep_ftir_net(
                 data=valdata,
                 spectra.line.table=as.data.frame(
                 count.table
@@ -4571,7 +4590,7 @@ content = function(file) {
             } else if(valDataType()=="Net" && cal_type(x)==4 && the.cal[[x]][[1]]$CalTable$NormType==1){
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=lucas.simp.prep.net(
+                newdata=lucas_simp_prep_ftir_net(
                 spectra.line.table=as.data.frame(
                 count.table
                 ),
@@ -4583,7 +4602,7 @@ content = function(file) {
             } else if(valDataType()=="Net" && cal_type(x)==4 && the.cal[[x]][[1]]$CalTable$NormType==2){
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=lucas.tc.prep.net(
+                newdata=lucas_tc_prep_ftir_net(
                 data=valdata,
                 spectra.line.table=as.data.frame(
                 count.table
@@ -4596,7 +4615,7 @@ content = function(file) {
             } else if(valDataType()=="Net" && cal_type(x)==4 && the.cal[[x]][[1]]$CalTable$NormType==3){
                 predict(
                 object=the.cal[[x]][[2]],
-                newdata=lucas.comp.prep.net(
+                newdata=lucas_comp_prep_ftir_net(
                 data=valdata,
                 spectra.line.table=as.data.frame(
                 count.table

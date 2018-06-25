@@ -569,7 +569,7 @@ GG_save_pdf = function(list, filename) {
 
 ####Cal Models
 
-linear.simp <- function(concentration.table, spectra.line.table, element.line) {
+linear_simp_ftir <- function(concentration.table, spectra.line.table, element.line) {
     
     
     
@@ -593,7 +593,7 @@ linear.simp <- function(concentration.table, spectra.line.table, element.line) {
     
 }
 
-poly.simp <- function(concentration.table, spectra.line.table, element.line) {
+poly_simp_ftir <- function(concentration.table, spectra.line.table, element.line) {
     
     
     
@@ -617,7 +617,7 @@ poly.simp <- function(concentration.table, spectra.line.table, element.line) {
     
 }
 
-lucas.simp <- function(concentration.table, spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
+lucas_simp_ftir <- function(concentration.table, spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
     
     
     concentration <- na.omit(as.vector(as.numeric(unlist(concentration.table[element.line]))))
@@ -651,7 +651,7 @@ lucas.simp <- function(concentration.table, spectra.line.table, element.line, sl
 }
 
 
-linear.tc <- function(concentration.table, spectra.line.table, element.line) {
+linear_tc_ftir <- function(concentration.table, spectra.line.table, element.line) {
     
     
     
@@ -680,7 +680,7 @@ linear.tc <- function(concentration.table, spectra.line.table, element.line) {
     
 }
 
-poly.tc <- function(concentration.table, spectra.line.table, element.line) {
+poly_tc_ftir <- function(concentration.table, spectra.line.table, element.line) {
     
     
     
@@ -716,7 +716,7 @@ poly.tc <- function(concentration.table, spectra.line.table, element.line) {
 
 
 
-lucas.tc <- function(concentration.table, spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
+lucas_tc_ftir <- function(concentration.table, spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
     
     
     concentration <- na.omit(as.vector(as.numeric(unlist(concentration.table[element.line]))))
@@ -749,7 +749,7 @@ lucas.tc <- function(concentration.table, spectra.line.table, element.line, slop
     
 }
 
-linear.comp <- function(data, concentration.table, spectra.line.table, element.line) {
+linear_comp_ftir <- function(data, concentration.table, spectra.line.table, element.line) {
     
     
     
@@ -780,7 +780,7 @@ linear.comp <- function(data, concentration.table, spectra.line.table, element.l
     
 }
 
-poly.comp <- function(data, concentration.table, spectra.line.table, element.line) {
+poly_comp_ftir <- function(data, concentration.table, spectra.line.table, element.line) {
     
     
     
@@ -811,7 +811,7 @@ poly.comp <- function(data, concentration.table, spectra.line.table, element.lin
     
 }
 
-lucas.comp <- function(data, concentration.table, spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
+lucas_comp_ftir <- function(data, concentration.table, spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
     
     
     concentration <- na.omit(as.vector(as.numeric(unlist(concentration.table[element.line]))))
@@ -866,7 +866,7 @@ lucas.comp <- function(data, concentration.table, spectra.line.table, element.li
 ###############
 
 
-spectra_frame <- function(spectra){
+spectra_frame_ftir <- function(spectra){
     
     data <- reshape2::dcast(spectra, Spectrum~Wavenumber)
     
@@ -876,7 +876,7 @@ spectra_frame <- function(spectra){
 }
 
 
-spectra_table <- function(spectra, concentration){
+spectra_table_ftir <- function(spectra, concentration){
     
     data <- reshape2::dcast(spectra, Spectrum~Wavenumber)
     data$Concentration <- concentration
@@ -889,7 +889,7 @@ spectra_table <- function(spectra, concentration){
 
 
 
-spectra.simp.prep <- function(spectra){
+spectra_simp_prep_ftir <- function(spectra){
     
     spectra$Energy <- round(spectra$Wavenumber, 0)
     spectra <- data.table(spectra)
@@ -903,7 +903,7 @@ spectra.simp.prep <- function(spectra){
     
 }
 
-spectra.tc.prep <- function(spectra){
+spectra_tc_prep_ftir <- function(spectra){
     
     spectra$Energy <- round(spectra$Wavenumber, 0)
     
@@ -925,7 +925,7 @@ spectra.tc.prep <- function(spectra){
     
 }
 
-spectra.comp.prep <- function(spectra, norm.min, norm.max){
+spectra_comp_prep_ftir <- function(spectra, norm.min, norm.max){
     
     compton.norm <- subset(spectra$Amplitude, !(spectra$Wavenumber < norm.min | spectra$Wavenumber > norm.max))
     compton.file <- subset(spectra$Spectrum, !(spectra$Wavenumber < norm.min | spectra$Wavenumber > norm.max))
@@ -961,7 +961,7 @@ spectra.comp.prep <- function(spectra, norm.min, norm.max){
 
 
 
-general.prep <- function(spectra.line.table, element.line) {
+general_prep_ftir <- function(spectra.line.table, element.line) {
     
     Amplitude <- spectra.line.table[,element.line]
     
@@ -970,7 +970,7 @@ general.prep <- function(spectra.line.table, element.line) {
 
 }
 
-simple.tc.prep <- function(data,spectra.line.table, element.line) {
+simple_tc_prep_ftir <- function(data,spectra.line.table, element.line) {
     
     Amplitude <- spectra.line.table[,element.line]
     
@@ -992,7 +992,7 @@ simple.tc.prep <- function(data,spectra.line.table, element.line) {
 }
 
 
-simple.comp.prep <- function(data, spectra.line.table, element.line, norm.min, norm.max) {
+simple_comp_prep_ftir <- function(data, spectra.line.table, element.line, norm.min, norm.max) {
     
     
     
@@ -1024,7 +1024,7 @@ simple.comp.prep <- function(data, spectra.line.table, element.line, norm.min, n
 
 
 
-lucas.simp.prep <- function(spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
+lucas_simp_prep_ftir <- function(spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
     
     
     Amplitude <- spectra.line.table[,element.line]
@@ -1063,7 +1063,7 @@ lucas.simp.prep <- function(spectra.line.table, element.line, slope.element.line
 
 
 
-lucas.tc.prep <- function(data, spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
+lucas_tc_prep_ftir <- function(data, spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
     
     
     Amplitude <- spectra.line.table[,element.line]
@@ -1106,7 +1106,7 @@ lucas.tc.prep <- function(data, spectra.line.table, element.line, slope.element.
 
 
 
-lucas.comp.prep <- function(data, spectra.line.table, element.line, slope.element.lines, intercept.element.lines, norm.min, norm.max) {
+lucas_comp_prep_ftir <- function(data, spectra.line.table, element.line, slope.element.lines, intercept.element.lines, norm.min, norm.max) {
     
     
     Amplitude <- spectra.line.table[,element.line]
@@ -1163,7 +1163,7 @@ lucas.comp.prep <- function(data, spectra.line.table, element.line, slope.elemen
 ###############
 
 
-general.prep.net <- function(spectra.line.table, element.line) {
+general_prep_ftir_net <- function(spectra.line.table, element.line) {
     
     Amplitude <- spectra.line.table[,element.line]
     
@@ -1179,7 +1179,7 @@ general.prep.net <- function(spectra.line.table, element.line) {
     predict.amplitude
 }
 
-simple.tc.prep.net <- function(data,spectra.line.table, element.line) {
+simple_tc_prep_ftir_net <- function(data,spectra.line.table, element.line) {
     
     Amplitude <- spectra.line.table[,element.line]
     
@@ -1201,7 +1201,7 @@ simple.tc.prep.net <- function(data,spectra.line.table, element.line) {
 }
 
 
-simple.comp.prep.net <- function(data, spectra.line.table, element.line, norm.min, norm.max) {
+simple_comp_prep_ftir_net <- function(data, spectra.line.table, element.line, norm.min, norm.max) {
     
     
     
@@ -1231,7 +1231,7 @@ simple.comp.prep.net <- function(data, spectra.line.table, element.line, norm.mi
 
 
 
-lucas.simp.prep.net <- function(spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
+lucas_simp_prep_ftir_net <- function(spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
     
     
     Amplitude <- spectra.line.table[,element.line]
@@ -1274,7 +1274,7 @@ lucas.simp.prep.net <- function(spectra.line.table, element.line, slope.element.
 
 
 
-lucas.tc.prep.net <- function(data, spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
+lucas_tc_prep_ftir_net <- function(data, spectra.line.table, element.line, slope.element.lines, intercept.element.lines) {
     
     
     Amplitude <- spectra.line.table[,element.line]
@@ -1319,7 +1319,7 @@ lucas.tc.prep.net <- function(data, spectra.line.table, element.line, slope.elem
 }
 
 
-lucas.comp.prep.net <- function(data, spectra.line.table, element.line, slope.element.lines, intercept.element.lines, norm.min, norm.max) {
+lucas_comp_prep_ftir_net <- function(data, spectra.line.table, element.line, slope.element.lines, intercept.element.lines, norm.min, norm.max) {
     
     
     Amplitude <- spectra.line.table[,element.line]
@@ -1371,7 +1371,7 @@ lucas.comp.prep.net <- function(data, spectra.line.table, element.line, slope.el
 }
 
 
-in_range <- function(spectrum, peak, pritable){
+in_range_ftir <- function(spectrum, peak, pritable){
     
     temp <- pritable[(pritable$Max>=peak & pritable$Min<=peak),]
     temp <- temp[complete.cases(temp[,c("id", "Peak.Range", "Wavenumbers", "Max", "Min", "Type", "General")]),]
@@ -1387,9 +1387,9 @@ in_range <- function(spectrum, peak, pritable){
 ####Machine Learning Functions
 
 
-create.frame.slopes <- function(element, slopes, values, intensities){
+create_frame_slopes_ftir <- function(element, slopes, values, amplitudes){
     values <- values[complete.cases(values[,element]),]
-    amplitudes <- intensities[complete.cases(values[,element]),]
+    amplitudes <- amplitudes[complete.cases(values[,element]),]
     
     data.frame(Value=values[,element],
     Amplitude=amplitudes[,"Amplitude"],
@@ -1397,7 +1397,7 @@ create.frame.slopes <- function(element, slopes, values, intensities){
     
 }
 
-create.frame.intercepts <- function(element, slopes, values, intensities){
+create_frame_intercepts_ftir <- function(element, slopes, values, amplitudes){
     
     data.frame(Value=values[,element],
     Amplitude=amplitudes[,"Amplitude"],
@@ -1407,13 +1407,13 @@ create.frame.intercepts <- function(element, slopes, values, intensities){
 
 
 
-optimal_r_chain <- function(element, intensities, values, possible.slopes, keep){
+optimal_r_chain_ftir <- function(element, amplitudes, values, possible.slopes, keep){
     
     values <- values[complete.cases(values[,element]),]
-    intensities <- intensities[complete.cases(values[,element]),]
+    amplitudes <- amplitudes[complete.cases(values[,element]),]
     index <- seq(1, length(possible.slopes), 1)
     
-    chain.lm <- pbapply::pblapply(possible.slopes, function(x) lm(Value~Amplitude+., data=create.frame.slopes(element=element, slopes=x, values=values[keep,], intensities=intensities)[keep,]))
+    chain.lm <- pbapply::pblapply(possible.slopes, function(x) lm(Value~Amplitude+., data=create.frame.slopes(element=element, slopes=x, values=values[keep,], amplitudes=amplitudes)[keep,]))
     
     #chain.predict <- pblapply(index, function(x) predict(object=chain.lm[[x]], newdata=create.frame.slopes(element=element, slopes=possible.slopes[[x]], values=values[keep,], intensities=intensities)[keep,], interval='confidence'))
     #chain.fits <- pblapply(chain.predict, function(x) data.frame(x)$fit)
@@ -1427,7 +1427,7 @@ optimal_r_chain <- function(element, intensities, values, possible.slopes, keep)
     coef <- data.frame(best$coefficients)
     best.var <- rownames(coef)[3:length(rownames(coef))]
     
-    simple.lm <- lm(Value~Amplitude, data=create.frame.slopes(element=element, slopes=element, values=values, intensities=intensities)[keep,])
+    simple_lm_ftir <- lm(Value~Amplitude, data=create_frame_slopes_ftir(element=element, slopes=element, values=values, amplitudes=amplitudes)[keep,])
     #simple.predict <- as.data.frame(predict(simple.lm, newdata=create.frame.slopes(element=element, slopes=element, values=values[keep,], intensities=intensities)[keep,], interval='confidence'), interval='confidence')$fit
     #simple.val <- lm(values[,element]~simple.predict)
     simple.aic <- extractAIC(simple.lm, k=log(length(1)))[2]
@@ -1446,7 +1446,7 @@ optimal_norm_chain <- function(data, element, spectra.line.table, values, possib
     
     index <- seq(1, length(possible.mins), 1)
     
-    chain.lm <- pbapply::pblapply(index, function(x) lm(values[,element]~simple.comp.prep(data=data, spectra.line.table=spectra.line.table, element.line=element, norm.min=possible.mins[x], norm.max=possible.maxs[x])$Amplitude, na.action=na.exclude))
+    chain.lm <- pbapply::pblapply(index, function(x) lm(values[,element]~simple_comp_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=element, norm.min=possible.mins[x], norm.max=possible.maxs[x])$Amplitude, na.action=na.exclude))
     aic <- lapply(chain.lm, function(x) extractAIC(x, k=log(length(1)))[2])
     best <- index[[which.min(unlist(aic))]]
     
@@ -1456,10 +1456,10 @@ optimal_norm_chain <- function(data, element, spectra.line.table, values, possib
 }
 
 
-optimal_intercept_chain <- function(element, intensities, values, keep){
+optimal_intercept_chain_ftir <- function(element, amplitudes, values, keep){
     
     
-    chain.lm <- pbapply::pblapply(intensities, function(x) lm(values[,element]~Amplitude, data=x[keep,]))
+    chain.lm <- pbapply::pblapply(amplitudes, function(x) lm(values[,element]~Amplitude, data=x[keep,]))
     aic <- lapply(chain.lm, function(x) extractAIC(x, k=log(1))[2])
     best <- chain.lm[[which.min(unlist(aic))]]
     coef <- data.frame(best$coefficients)
