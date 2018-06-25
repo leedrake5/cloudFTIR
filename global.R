@@ -161,7 +161,7 @@ readOpusData <- function(filepath, filename){
     
 }
 
-range_subset <- function(range.frame, data){
+range_subset_ftir <- function(range.frame, data){
     
     new.data <- subset(data, Wavenumber >= range.frame$WaveMin & Wavenumber <= range.frame$WaveMax, drop=TRUE)
     newer.data <- aggregate(new.data, by=list(new.data$Spectrum), FUN=mean, na.rm=TRUE)[,c("Group.1", "Amplitude")]
@@ -178,7 +178,7 @@ ftir_parse <- function(range.table, data){
     
     index <- choice.lines[,"Name"]
     
-    selected.list <- lapply(index, function(x) range_subset(range.frame=choice.list[[x]], data=data))
+    selected.list <- lapply(index, function(x) range_subset_ftir(range.frame=choice.list[[x]], data=data))
     
     Reduce(function(...) merge(..., all=T), selected.list)
 }
@@ -474,79 +474,6 @@ merge_Sum <- function(.df1, .df2, .id_Columns, .match_Columns){
         }
     }
     return(merged_df1)
-}
-
-pblapply <- function (X, FUN, ..., cl = my.cores)
-{
-    FUN <- match.fun(FUN)
-    if (!is.vector(X) || is.object(X))
-    X <- as.list(X)
-    if (!is.null(cl)) {
-        if (.Platform$OS.type == "windows") {
-            if (!inherits(cl, "cluster"))
-            cl <- NULL
-        }
-        else {
-            if (inherits(cl, "cluster")) {
-                if (length(cl) < 2L)
-                cl <- NULL
-            }
-            else {
-                if (cl < 2)
-                cl <- NULL
-            }
-        }
-    }
-    nout <- as.integer(getOption("pboptions")$nout)
-    if (is.null(cl)) {
-        if (!dopb())
-        return(lapply(X, FUN, ...))
-        Split <- splitpb(length(X), 1L, nout = nout)
-        B <- length(Split)
-        pb <- startpb(0, B)
-        on.exit(closepb(pb), add = TRUE)
-        rval <- vector("list", B)
-        for (i in seq_len(B)) {
-            rval[i] <- list(lapply(X[Split[[i]]], FUN, ...))
-            setpb(pb, i)
-        }
-    }
-    else {
-        if (inherits(cl, "cluster")) {
-            PAR_FUN <- if (isTRUE(getOption("pboptions")$use_lb))
-            parallel::parLapplyLB
-            else parallel::parLapply
-            if (!dopb())
-            return(PAR_FUN(my.cores, X, FUN, ...))
-            Split <- splitpb(length(X), length(my.cores), nout = nout)
-            B <- length(Split)
-            pb <- startpb(0, B)
-            on.exit(closepb(pb), add = TRUE)
-            rval <- vector("list", B)
-            for (i in seq_len(B)) {
-                rval[i] <- list(PAR_FUN(cl, X[Split[[i]]], FUN,
-                ...))
-                setpb(pb, i)
-            }
-        }
-        else {
-            if (!dopb())
-            return(parallel::mclapply(X, FUN, ..., mc.cores = as.integer(my.cores)))
-            Split <- splitpb(length(X), as.integer(my.cores), nout = nout)
-            B <- length(Split)
-            pb <- startpb(0, B)
-            on.exit(closepb(pb), add = TRUE)
-            rval <- vector("list", B)
-            for (i in seq_len(B)) {
-                rval[i] <- list(parallel::mclapply(X[Split[[i]]],
-                FUN, ..., mc.cores = as.integer(my.cores)))
-                setpb(pb, i)
-            }
-        }
-    }
-    rval <- do.call(c, rval, quote = TRUE)
-    names(rval) <- names(X)
-    rval
 }
 
 
