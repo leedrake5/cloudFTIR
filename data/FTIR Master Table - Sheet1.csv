@@ -1,4 +1,4 @@
-id,Peak Range,Wavelengths,Max,Mid,Min,Type,General,Group,Addtional Info,Bond,Compound (from Compound Table),Description w/Ref,Description w/o Ref,Description Reference,Source w/Ref,Source w/o Ref,Source Reference,Occurs in (Use FTIR Compounds Table)
+id,Peak Range,Wavenumbers,Max,Mid,Min,Type,General,Group,Addtional Info,Bond,Compound (from Compound Table),Description w/Ref,Description w/o Ref,Description Reference,Source w/Ref,Source w/o Ref,Source Reference,Occurs in (Use FTIR Compounds Table)
 a85,1643,1643,,1643,,Alkene C=C,Alkene C=C,Other,9,C=C,,,,,,,,
 a82,"1652, 1643",1652,,1652,,Alkene C=C,Alkene C=C,Other,9,C=C,,,,,,,,
 a83,1643,1643,,1643,,Alkene C=C,Alkene C=C,Other,9,C=C,,,,,,,,
@@ -195,9 +195,7 @@ a5,2933,2933,,2933,,"Chitin (O–H Stretching)
  N-acetyl group)
  Chitin (N–H Bending of
  N-acetyl group)",Carb:Polysaccharide,Carb:Polysaccharide,,,,,,,,,,
-a7," 1660/59
-"," 1660/59
-",1660,,1659,"Chitin (O–H Stretching)
+a7,1660/59,1660/59,1660,,1659,"Chitin (O–H Stretching)
  Chitin (COCH3Stretching)
  Chitin (C–H Stretching)
  Chitin (C–O Stretching)
@@ -237,8 +235,7 @@ a4,"3452/3444
  1660/59
  1626
  
- 1558","3452/3444
-",3452,3448,3444,"Chitin (O–H Stretching)
+ 1558",3452/3444,3452,3448,3444,"Chitin (O–H Stretching)
  Chitin (COCH3Stretching)
  Chitin (C–H Stretching)
  Chitin (C–O Stretching)
