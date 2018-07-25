@@ -20,7 +20,7 @@ header=tags$head(tags$style(".table .alignRight {color: black; text-align:right;
 
 tags$head(tags$script("$(function() {$.fn.dataTableExt.errMode = 'throw';});")),
 
-shinyUI(navbarPage("cloudFTIR", id="nav", theme = shinytheme("flatly"),
+shinyUI(navbarPage("cloudFTIR", id="nav", theme = shinytheme("yeti"),
 
 
 
@@ -41,11 +41,6 @@ textInput('projectname', label = "Project Name", value="myFTIR"),
 tags$hr(),
 
 #actionButton('actionprocess', label = "Process Data"),
-downloadButton('downloadPlot', "Plot"),
-downloadButton('downloadPeakTableID', "Peak ID"),
-downloadButton('downloadPeakTableSummary', "Summary"),
-downloadButton('downloadsummaryplot', "Summary Plot"),
-downloadButton('downloadData', "Raw"),
 #downloadButton('downloadfp', "FP"),
 
 
@@ -54,13 +49,14 @@ dropdownButton(
 tags$h3("Manual Changes"), icon = icon("gear"),
 checkboxInput('advanced', "Advanced", value=FALSE),
 uiOutput('gainshiftui'),
-checkboxInput('backgroundsubtract', "Background Subtract", value=FALSE),
+
+selectInput('datatransformations', "Data Transformation", choices=c("None", "Background Subtract", "Derivative", "Log", "e"), selected="None"),
 checkboxInput('combine', "Combine", value=FALSE),
 checkboxInput('invert', "Invert", value=FALSE),
 tooltip = tooltipOptions(title = "Click for manual options")
 ),
 
-checkboxInput('showpeaks', "Show Peaks", value=TRUE),
+checkboxInput('showpeaks', "Show Peaks", value=FALSE),
 
 
 sliderInput('spikesensitivity', "Spike Proximity", min=0.1, max=100, value=20),
@@ -101,11 +97,18 @@ tabPanel("Plot",
             brush = brushOpts(id = 'plot1_brush', resetOnNew = TRUE),
             hover = hoverOpts('plot_hover_spectrum', delay = 100, delayType = "debounce")),
         uiOutput('hover_info_spectrum')),
+tags$hr(),
 actionButton("exclude_toggle", "Toggle points"),
-actionButton("exclude_reset", "Reset")
+actionButton("exclude_reset", "Reset"),
+downloadButton('downloadPlot', "Plot")
 ),
-tabPanel("Peak ID", dataTableOutput('peaktableid')),
-tabPanel("Summary", dataTableOutput('peaktablesummary')),
+tabPanel("Peak ID", dataTableOutput('peaktableid'),
+    tags$hr(),
+    downloadButton('downloadPeakTableID', "Peak ID")
+),
+tabPanel("Summary", dataTableOutput('peaktablesummary'),
+    tags$hr(),
+    downloadButton('downloadPeakTableSummary', "Summary")),
 tabPanel("Summary Plot",
     div(
         style = "position:relative",
@@ -113,9 +116,13 @@ tabPanel("Summary Plot",
             dblclick = 'sumplot1_dblclick',
             brush = brushOpts(id = 'sumplot1_brush', resetOnNew = TRUE),
         hover = hoverOpts('sumplot_hover_spectrum', delay = 100, delayType = "debounce"))
+    ),
+        tags$hr(),
+        downloadButton('downloadsummaryplot', "Summary Plot")),
+tabPanel("Raw Data", dataTableOutput('peaktable'),
+    downloadButton('downloadData', "Raw")
 
-)),
-tabPanel("Raw Data", dataTableOutput('peaktable'))
+    )
 
 ))
 )

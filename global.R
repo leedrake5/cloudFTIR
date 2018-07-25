@@ -34,7 +34,7 @@ keep_singles <- function(v){
 Hodder.v <- function(y)
 {
     
-    n<-length(y)
+    n <-length(y)
     
     for(i in 1:(n-1)) {
         y[i] <- y[i+1] - y[i]
@@ -44,6 +44,19 @@ Hodder.v <- function(y)
     y <- c(0, y[1:(n-1)])
     
     return(y)
+}
+
+Shepherd.v <- function(y) {
+    n <-length(y)
+    mean <- mean(y)
+    sd <- sd(y)
+    
+    for(i in 1:n) {
+        y[i] <- (y[i]/mean)*sd
+    }
+    
+    return(y)
+
 }
 
 cal.lmsummary <-function(lm.object){
@@ -947,6 +960,8 @@ simple_comp_prep_ftir <- function(data, spectra.line.table, element.line, norm.m
 
 
 
+
+
 ###Prep Data
 
 
@@ -1076,6 +1091,7 @@ lucas_comp_prep_ftir <- function(data, spectra.line.table, element.line, slope.e
     
     predict.frame.luc.comp
 }
+
 
 
 

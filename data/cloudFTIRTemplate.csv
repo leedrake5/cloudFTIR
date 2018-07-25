@@ -1,0 +1,5 @@
+id,Peak Range,Wavenumbers,Max,Mid,Min,Type,General,Group,Addtional Info,Bond,Compound (from Compound Table),Description w/Ref,Description w/o Ref,Description Reference,Source w/Ref,Source w/o Ref,Source Reference,Occurs in (Use FTIR Compounds Table)
+a85,1643,1643,,1643,,Alkene C=C,Alkene C=C,Other,9,C=C,,,,,,,,
+a82,"1652, 1643",1652,,1652,,Alkene C=C,Alkene C=C,Other,9,C=C,,,,,,,,
+a83,1643,1643,,1643,,Alkene C=C,Alkene C=C,Other,9,C=C,,,,,,,,
+a312,~960,~960,,960,,Aluminum dish,Aluminum dish,Other,999,,,,,,,,,

@@ -172,8 +172,7 @@ shinyServer(function(input, output, session) {
                 data
         })
         
-  
-
+        
         dataHold <- reactive({
             data <- if(input$usecalfile==FALSE){
                 myData()
@@ -181,17 +180,27 @@ shinyServer(function(input, output, session) {
                 calFileContents()[["Spectra"]]
             }
             
-    
+            
             data <- data[order(as.character(data$Spectrum)),]
-    
+            
             data$Spectrum <- gsub(".dpt", "", data$Spectrum)
             data$Spectrum <- gsub(".csv", "", data$Spectrum)
             data$Spectrum <- gsub(".CSV", "", data$Spectrum)
             #data$Spectrum <- gsub(".0", "", data$Spectrum)
-
+            
             data
-    
+            
         })
+        
+        dataList <- reactive({
+            
+            split(dataHold() , f = dataHold()$Spectrum )
+            
+        })
+        
+  
+
+
         
         
         dataCombine <- reactive({
@@ -209,12 +218,16 @@ shinyServer(function(input, output, session) {
         dataBackgroundSubtract <- reactive({
             
             data <- if(input$combine==FALSE){
-                dataHold()
+                dataList()
             } else if(input$combine==TRUE){
                 dataCombine()
             }
             
-            data$Amplitude <- Hodder.v(data$Amplitude)
+            data <- if(input$combine==FALSE){
+                data <- do.call("rbind", lapply(data, function(x) data.frame(Spectrum=x$Spectrum, Wavenumber=x$Wavenumber, Amplitude=Hodder.v(x$Amplitude))))
+            } else if(input$combine==TRUE){
+                data$Amplitude <- Hodder.v(data$Amplitude)
+            }
             
             data
 
@@ -222,16 +235,83 @@ shinyServer(function(input, output, session) {
         })
         
         
+        dataShepherd <- reactive({
+            
+            data <- if(input$combine==FALSE){
+                dataList()
+            } else if(input$combine==TRUE){
+                dataCombine()
+            }
+            
+            data <- if(input$combine==FALSE){
+                data <- do.call("rbind", lapply(data, function(x) data.frame(Spectrum=x$Spectrum, Wavenumber=x$Wavenumber, Amplitude=Shepherd.v(x$Amplitude))))
+            } else if(input$combine==TRUE){
+                data$Amplitude <- Shepherd.v(data$Amplitude)
+            }
+            
+            data
+       
+        })
+        
+        dataLog <- reactive({
+            
+            data <- if(input$combine==FALSE){
+                dataList()
+            } else if(input$combine==TRUE){
+                dataCombine()
+            }
+            
+            data <- if(input$combine==FALSE){
+                data <- do.call("rbind", lapply(data, function(x) data.frame(Spectrum=x$Spectrum, Wavenumber=x$Wavenumber, Amplitude=log(x$Amplitude))))
+            } else if(input$combine==TRUE){
+                data$Amplitude <- log(data$Amplitude)
+            }
+            
+            data
+            
+        })
+        
+        dataExp <- reactive({
+            
+            data <- if(input$combine==FALSE){
+                dataList()
+            } else if(input$combine==TRUE){
+                dataCombine()
+            }
+            
+            data <- if(input$combine==FALSE){
+                data <- do.call("rbind", lapply(data, function(x) data.frame(Spectrum=x$Spectrum, Wavenumber=x$Wavenumber, Amplitude=exp(x$Amplitude))))
+            } else if(input$combine==TRUE){
+                data$Amplitude <- exp(data$Amplitude)
+            }
+            
+            data
+            
+        })
+        
+        
         dataManipulate <- reactive({
             
-            if(input$combine==FALSE && input$backgroundsubtract==FALSE){
+            if(input$combine==FALSE && input$datatransformations=="None"){
                 dataHold()
-            } else if(input$combine==TRUE && input$backgroundsubtract==FALSE){
+            } else if(input$combine==TRUE && input$datatransformations=="None"){
                 dataCombine()
-            }  else if(input$combine==TRUE && input$backgroundsubtract==TRUE){
+            }  else if(input$combine==TRUE && input$datatransformations=="Background Subtract"){
                 dataBackgroundSubtract()
-            } else if(input$combine==FALSE && input$backgroundsubtract==TRUE){
+            } else if(input$combine==FALSE && input$datatransformations=="Background Subtract"){
                 dataBackgroundSubtract()
+            }  else if(input$combine==TRUE && input$datatransformations=="Derivative"){
+                dataShepherd()
+            } else if(input$combine==FALSE && input$datatransformations=="Derivative"){
+                dataShepherd()
+            }  else if(input$combine==TRUE && input$datatransformations=="Log"){
+                dataLog()
+            } else if(input$combine==FALSE && input$datatransformations=="Log"){
+                dataLog()
+            }  else if(input$combine==TRUE && input$datatransformations=="e"){
+                dataExp()
+            } else if(input$combine==FALSE && input$datatransformations=="e"){
+                dataExp()
             }
             
             
@@ -577,7 +657,7 @@ shinyServer(function(input, output, session) {
              theme_light()+
              theme(legend.position="bottom") +
              scale_colour_discrete("Spectrum") +
-             scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), limits=c(max(data[,2]), min(data[,2])), breaks=seq(0, 4000, 250)) +
+             scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), limits=c(max(data[,2]), min(data[,2])), breaks=seq(0, max(data[,2]), min(data[,2]))) +
              scale_y_continuous("Amplitude") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
              geom_point(data=peakTable(), aes(Wavenumber, Amplitude), shape=1, size=3) +
@@ -593,7 +673,7 @@ shinyServer(function(input, output, session) {
              geom_line(aes(Wavenumber, Amplitude)) +
              theme_light()+
              theme(legend.position="bottom") +
-             scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), breaks=seq(0, 4000, 250)) +
+             scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), limits=c(max(data[,2]), min(data[,2])), breaks=seq(0, max(data[,2]), min(data[,2]))) +
              scale_y_continuous("Amplitude") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
              geom_point(data=peakTable(), aes(Wavenumber, Amplitude), shape=1, size=3) +
@@ -610,7 +690,7 @@ shinyServer(function(input, output, session) {
              theme_light()+
              theme(legend.position="bottom") +
              scale_colour_discrete("Spectrum") +
-             scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), breaks=seq(0, 4000, 250)) +
+             scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), limits=c(max(data[,2]), min(data[,2])), breaks=seq(0, max(data[,2]), min(data[,2]))) +
              scale_y_reverse("Amplitude") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
              geom_point(data=peakTable(), aes(Wavenumber, Amplitude), shape=1, size=3) +
@@ -626,7 +706,7 @@ shinyServer(function(input, output, session) {
              geom_line(aes(Wavenumber, Amplitude)) +
              theme_light()+
              theme(legend.position="bottom") +
-             scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), breaks=seq(0, 4000, 250)) +
+             scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), limits=c(max(data[,2]), min(data[,2])), breaks=seq(0, max(data[,2]), min(data[,2]))) +
              scale_y_reverse("Amplitude") +
              coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
              geom_point(data=peakTable(), aes(Wavenumber, Amplitude), shape=1, size=3) +
