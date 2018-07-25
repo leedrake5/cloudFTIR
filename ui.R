@@ -43,7 +43,7 @@ tags$hr(),
 #actionButton('actionprocess', label = "Process Data"),
 #downloadButton('downloadfp', "FP"),
 
-
+checkboxInput('showspectralplot', "Show Spectra", value=TRUE),
 
 dropdownButton(
 tags$h3("Manual Changes"), icon = icon("gear"),
@@ -209,9 +209,9 @@ sidebarLayout(
 sidebarPanel(width=3,
 
 
-downloadButton('downloadcloudplot', "Plot"),
 actionButton('createcalelement', "Update"),
 actionButton('createcal', "Save"),
+tags$hr(),
 downloadButton('downloadModel', "Model"),
 downloadButton('downloadReport', "Report"),
 
@@ -267,7 +267,8 @@ actionButton("cropval", "Zoom")
 ),
 tags$hr(),
 actionButton("exclude_toggle", "Toggle points"),
-actionButton("exclude_reset", "Reset")
+actionButton("exclude_reset", "Reset"),
+downloadButton('downloadcloudplot', "Plot")
 
 ),
 
@@ -294,7 +295,9 @@ uiOutput("hover_infoval_random")),
 actionButton("cropvalrandom", "Zoom")
 )),
 tags$hr(),
-sliderInput('percentrandom', "Randomize", min=.01, max=.99, value=.20)
+sliderInput('percentrandom', "Randomize", min=.01, max=.99, value=.20),
+downloadButton('downloadcloudplotrandomized', "Plot")
+
 
 ),
 

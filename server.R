@@ -648,7 +648,7 @@ shinyServer(function(input, output, session) {
         
          plotInput <- reactive({
              
-             data <- dataManipulate()
+             data <- if(input$showspectralplot==TRUE){dataManipulate()}
 
              n <- length(data$Wavenumber)
              
@@ -1889,12 +1889,12 @@ content = function(file) {
         
         cal.lm.luc <- lm(Concentration~., data=predict.frame.luc, na.action=na.exclude)
         
-        cal.lm.forest <- randomForest(Concentration~., data=predict.frame.forest, na.action=na.omit)
+        cal.lm.forest <- randomForest(Concentration~., data=predict.frame.forest, na.action=na.omit, ntrees=1000)
         
         forest.predict <- predict(cal.lm.forest, new.data=predict.frame.forest, proximity=FALSE)
         forest.sum <- lm(predict.frame$Concentration~forest.predict, na.action=na.exclude)
         
-        cal.lm.rainforest <-randomForest(Concentration~., data=predict.frame.rainforest[,-1], na.action=na.omit)
+        cal.lm.rainforest <-randomForest(Concentration~., data=predict.frame.rainforest[,-1], na.action=na.omit, ntrees=1000)
         rainforest.predict <- predict(cal.lm.rainforest, new.data=predict.frame.rainforest, proximity=FALSE)
         rainforest.sum <- lm(predict.frame.rainforest$Concentration~rainforest.predict, na.action=na.exclude)
         
@@ -1916,7 +1916,7 @@ content = function(file) {
     
     testing <- reactive({
         predict.frame <- predictFrame()[complete.cases(predictFrame()$Concentration),]
-        cal.lm.forest <- randomForest(Concentration~., data=predict.frame, na.action=na.omit)
+        cal.lm.forest <- randomForest(Concentration~., data=predict.frame, na.action=na.omit, ntrees=1000)
         
         forest.predict <- predict(cal.lm.forest, new.data=predict.frame, proximity=FALSE)
         as.data.frame(forest.predict)
@@ -2374,11 +2374,11 @@ content = function(file) {
         }
         
         if (input$radiocal==4){
-            cal.lm <- randomForest(Concentration~., data=predict.frame[ vals$keeprows, , drop = FALSE], na.action=na.omit)
+            cal.lm <- randomForest(Concentration~., data=predict.frame[ vals$keeprows, , drop = FALSE], na.action=na.omit, ntrees=1000)
         }
         
         if (input$radiocal==5){
-            cal.lm <- randomForest(Concentration~., data=predict.frame[ vals$keeprows, , drop = FALSE], na.action=na.omit)
+            cal.lm <- randomForest(Concentration~., data=predict.frame[ vals$keeprows, , drop = FALSE], na.action=na.omit, ntrees=1000)
         }
         
         cal.lm
@@ -2780,11 +2780,11 @@ content = function(file) {
         }
         
         if (input$radiocal==4){
-            cal.lm <- randomForest(Concentration~., data=predict.frame, na.action=na.omit)
+            cal.lm <- randomForest(Concentration~., data=predict.frame, na.action=na.omit, ntrees=1000)
         }
         
         if (input$radiocal==5){
-            cal.lm <- randomForest(Concentration~., data=predict.frame, na.action=na.omit)
+            cal.lm <- randomForest(Concentration~., data=predict.frame, na.action=na.omit, ntrees=1000)
         }
         
         cal.lm
@@ -3174,6 +3174,21 @@ content = function(file) {
     output$valcurveplotsrandom <- renderPlot({
         valCurvePlotRandom()
     })
+    
+    
+    calPlotDownloadRandomized <- reactive({
+        
+        grid.arrange(calCurvePlotRandom(), valCurvePlotRandom(), ncol=2)
+        
+    })
+    
+    
+    output$downloadcloudplotrandomized <- downloadHandler(
+    filename = function() { paste(paste(c(input$calname, "_", input$calcurveline), collapse=''), '.tiff',  sep='') },
+    content = function(file) {
+        ggsave(file,calPlotDownloadRandomized(), device="tiff", compression="lzw", type="cairo", dpi=300, width=12, height=7)
+    }
+    )
     
     
     ####CalCurves
