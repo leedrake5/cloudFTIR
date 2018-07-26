@@ -301,6 +301,9 @@ downloadButton('downloadcloudplotrandomized', "Plot")
 
 ),
 
+tabPanel("Models", dataTableOutput("models")),
+
+
 tabPanel("Diagnostics",
 splitLayout(cellWidths = c("50%", "50%"),
 div(
