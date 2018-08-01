@@ -1,6 +1,6 @@
 list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "broom", "shinyjs", "gridExtra", "dtplyr", "formattable", "XML", "corrplot", "scales", "rmarkdown", "markdown", "peakPick", "shinyWidgets", "soil.spec", "data.table")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-#if(length(new.packages)) install.packages(new.packages)
+if(length(new.packages)) install.packages(new.packages)
 
 options(warn=-1)
 assign("last.warning", NULL, envir = baseenv())
@@ -173,6 +173,14 @@ readOpusData <- function(filepath, filename){
     return(file.frame)
     
 }
+
+
+
+    
+    
+    
+    
+
 
 range_subset_ftir <- function(range.frame, data){
     

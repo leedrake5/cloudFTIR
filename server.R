@@ -254,6 +254,25 @@ shinyServer(function(input, output, session) {
        
         })
         
+        
+        dataDerivative <- reactive({
+            
+            data <- if(input$combine==FALSE){
+                dataList()
+            } else if(input$combine==TRUE){
+                dataCombine()
+            }
+            
+            data <- if(input$combine==FALSE){
+                data <- do.call("rbind", lapply(data, function(x) data.frame(Spectrum=x$Spectrum, Wavenumber=x$Wavenumber, Amplitude=diff(x$Amplitude))))
+            } else if(input$combine==TRUE){
+                data$Amplitude <- diff(data$Amplitude)
+            }
+            
+            data
+            
+        })
+        
         dataLog <- reactive({
             
             data <- if(input$combine==FALSE){
@@ -302,9 +321,9 @@ shinyServer(function(input, output, session) {
             } else if(input$combine==FALSE && input$datatransformations=="Background Subtract"){
                 dataBackgroundSubtract()
             }  else if(input$combine==TRUE && input$datatransformations=="Derivative"){
-                dataShepherd()
+                dataDerivative()
             } else if(input$combine==FALSE && input$datatransformations=="Derivative"){
-                dataShepherd()
+                dataDerivative()
             }  else if(input$combine==TRUE && input$datatransformations=="Log"){
                 dataLog()
             } else if(input$combine==FALSE && input$datatransformations=="Log"){
@@ -2726,7 +2745,7 @@ content = function(file) {
         line.model <- lineModel()
         val.frame <- valFrame()
         
-        element.name <- gsub("[.]", "", substr(input$calcurveline, 1, 2))
+        element.name <-input$calcurveline
         intens <- " Counts per Second"
         norma <- " Normalized"
         norma.comp <- " Compton Normalized"
@@ -2840,7 +2859,7 @@ content = function(file) {
         
         
         
-        element.name <- gsub("[.]", "", substr(input$calcurveline, 1, 2))
+        element.name <-input$calcurveline
         intens <- " Counts per Second"
         norma <- " Normalized"
         norma.comp <- " Compton Normalized"
@@ -2901,7 +2920,7 @@ content = function(file) {
     
     
     output$downloadcloudplot <- downloadHandler(
-    filename = function() { paste(paste(c(input$calname, "_", input$calcurveline), collapse=''), '.tiff',  sep='') },
+    filename = function() { paste(paste(c(input$projectname, "_", input$calcurveline), collapse=''), '.tiff',  sep='') },
     content = function(file) {
         ggsave(file,calPlotDownload(), device="tiff", compression="lzw", type="cairo", dpi=300, width=12, height=7)
     }
@@ -3218,7 +3237,7 @@ content = function(file) {
         line.model <- lineModelRandom()
         
         
-        element.name <- gsub("[.]", "", substr(input$calcurveline, 1, 2))
+        element.name <-input$calcurveline
         intens <- " Counts per Second"
         norma <- " Normalized"
         norma.comp <- " Compton Normalized"
@@ -3329,7 +3348,7 @@ content = function(file) {
         
         
         
-        element.name <- gsub("[.]", "", substr(input$calcurveline, 1, 2))
+        element.name <-input$calcurveline
         intens <- " Counts per Second"
         norma <- " Normalized"
         norma.comp <- " Compton Normalized"
@@ -3383,7 +3402,7 @@ content = function(file) {
     
     
     output$downloadcloudplotrandomized <- downloadHandler(
-    filename = function() { paste(paste(c(input$calname, "_", input$calcurveline), collapse=''), '.tiff',  sep='') },
+    filename = function() { paste(paste(c(input$projectname, "_", input$calcurveline), collapse=''), '.tiff',  sep='') },
     content = function(file) {
         ggsave(file,calPlotDownloadRandomized(), device="tiff", compression="lzw", type="cairo", dpi=300, width=12, height=7)
     }
