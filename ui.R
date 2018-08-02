@@ -341,8 +341,11 @@ uiOutput("hover_infocooksleverage"))
 actionButton("exclude_toggle_diag", "Toggle points"),
 actionButton("exclude_reset_diag", "Reset")),
 
-tabPanel("Variables", plotOutput('importanceplot', hover = hoverOpts('plot_hover_variable', delay = 100, delayType = "debounce")),
-uiOutput('hover_info_variable')),
+tabPanel("Variables",
+    div(
+    style = "position:relative",
+    plotOutput('importanceplot', hover = hoverOpts('plot_hover_variable', delay = 100, delayType = "debounce")),
+uiOutput('hover_info_variable'))),
 
 #tabPanel("Testing", dataTableOutput('testtable')),
 #tabPanel("Testing2", dataTableOutput('testtable2')),
