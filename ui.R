@@ -295,7 +295,7 @@ uiOutput("hover_infoval_random")),
 actionButton("cropvalrandom", "Zoom")
 )),
 tags$hr(),
-sliderInput('percentrandom', "Randomize", min=.01, max=.99, value=.20),
+sliderInput('percentrandom', "Randomize", min=.01, max=.99, value=.33),
 downloadButton('downloadcloudplotrandomized', "Plot")
 
 
@@ -345,7 +345,10 @@ tabPanel("Variables",
     div(
     style = "position:relative",
     plotOutput('importanceplot', hover = hoverOpts('plot_hover_variable', delay = 100, delayType = "debounce")),
-uiOutput('hover_info_variable'))),
+uiOutput('hover_info_variable')),
+tags$hr(),
+downloadButton('variablePlot', "Plot")
+),
 
 #tabPanel("Testing", dataTableOutput('testtable')),
 #tabPanel("Testing2", dataTableOutput('testtable2')),

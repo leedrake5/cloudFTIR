@@ -25,7 +25,7 @@ library(caret)
 library(randomForest)
 library(DescTools)
 pdf(NULL)
-
+options(shiny.maxRequestSize=30*1024^2)
 options(warn=-1)
 assign("last.warning", NULL, envir = baseenv())
 
@@ -1640,7 +1640,8 @@ rainForestImportancePlot <- reactive({
     ggplot(importance.frame) +
     geom_line(aes(Wavenumber, NodePurity)) +
     theme_light() +
-    scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")))
+    scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")))+
+    scale_y_continuous(paste0(input$calcurveline, " Node Purity"))
 
     
 })
@@ -1697,9 +1698,9 @@ output$hover_info_variable <- renderUI({
 })
 
 output$variablePlot <- downloadHandler(
-filename = function() { paste0(input$projectname, '_Variables', '.jpg', sep='') },
+filename = function() { paste0(input$projectname, '_', input$calcurveline, '_Variables', '.tiff', sep='') },
 content = function(file) {
-    ggsave(file,variablesPlot(), width=14, height=8, device="jpeg")
+    ggsave(file,variablesPlot(), width=14, height=8, device="tiff", compression="lzw", type="cairo", dpi=300)
 }
 )
     
