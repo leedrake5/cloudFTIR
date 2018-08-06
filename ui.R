@@ -100,7 +100,8 @@ tabPanel("Plot",
 tags$hr(),
 actionButton("exclude_toggle", "Toggle points"),
 actionButton("exclude_reset", "Reset"),
-downloadButton('downloadPlot', "Plot")
+downloadButton('downloadPlot', "Plot"),
+checkboxInput('showlegend', "Show Legend", value=TRUE)
 ),
 tabPanel("Peak ID", dataTableOutput('peaktableid'),
     tags$hr(),

@@ -681,7 +681,9 @@ shinyServer(function(input, output, session) {
 
              n <- length(data$Wavenumber)
              
-            normal <- ggplot(data) +
+             
+             ###With Legend
+             normal <- ggplot(data) +
              geom_line(aes(Wavenumber, Amplitude, colour=Spectrum)) +
              theme_light()+
              theme(legend.position="bottom") +
@@ -747,16 +749,96 @@ shinyServer(function(input, output, session) {
              theme(legend.title=element_text(size=15)) +
              theme(legend.text=element_text(size=15))
              
+             
+             ###Without Legend
+             normal.nolegend <- ggplot(data) +
+             geom_line(aes(Wavenumber, Amplitude, colour=Spectrum)) +
+             theme_light()+
+             theme(legend.position="bottom") +
+             scale_colour_discrete("Spectrum") +
+             scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), limits=c(max(data[,2]), min(data[,2])), breaks=seq(0, max(data[,2]), min(data[,2]))) +
+             scale_y_continuous("Amplitude") +
+             coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
+             geom_point(data=peakTable(), aes(Wavenumber, Amplitude), shape=1, size=3) +
+             theme(axis.text.x = element_text(size=15)) +
+             theme(axis.text.y = element_text(size=15)) +
+             theme(axis.title.x = element_text(size=15)) +
+             theme(axis.title.y = element_text(size=15, angle=90)) +
+             theme(plot.title=element_text(size=20)) +
+             theme(legend.title=element_text(size=15)) +
+             theme(legend.text=element_text(size=15)) +
+             guides(colour=FALSE)
+             
+             combine.nolegend  <- ggplot(data) +
+             geom_line(aes(Wavenumber, Amplitude)) +
+             theme_light()+
+             theme(legend.position="bottom") +
+             scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), limits=c(max(data[,2]), min(data[,2])), breaks=seq(0, max(data[,2]), min(data[,2]))) +
+             scale_y_continuous("Amplitude") +
+             coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
+             geom_point(data=peakTable(), aes(Wavenumber, Amplitude), shape=1, size=3) +
+             theme(axis.text.x = element_text(size=15)) +
+             theme(axis.text.y = element_text(size=15)) +
+             theme(axis.title.x = element_text(size=15)) +
+             theme(axis.title.y = element_text(size=15, angle=90)) +
+             theme(plot.title=element_text(size=20)) +
+             theme(legend.title=element_text(size=15)) +
+             theme(legend.text=element_text(size=15)) +
+             guides(colour=FALSE)
+             
+             normal.invert.nolegend  <- ggplot(data) +
+             geom_line(aes(Wavenumber, Amplitude, colour=Spectrum)) +
+             theme_light()+
+             theme(legend.position="bottom") +
+             scale_colour_discrete("Spectrum") +
+             scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), limits=c(max(data[,2]), min(data[,2])), breaks=seq(0, max(data[,2]), min(data[,2]))) +
+             scale_y_reverse("Amplitude") +
+             coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
+             geom_point(data=peakTable(), aes(Wavenumber, Amplitude), shape=1, size=3) +
+             theme(axis.text.x = element_text(size=15)) +
+             theme(axis.text.y = element_text(size=15)) +
+             theme(axis.title.x = element_text(size=15)) +
+             theme(axis.title.y = element_text(size=15, angle=90)) +
+             theme(plot.title=element_text(size=20)) +
+             theme(legend.title=element_text(size=15)) +
+             theme(legend.text=element_text(size=15)) +
+             guides(colour=FALSE)
+             
+             combine.invert.nolegend <- ggplot(data) +
+             geom_line(aes(Wavenumber, Amplitude)) +
+             theme_light()+
+             theme(legend.position="bottom") +
+             scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")), limits=c(max(data[,2]), min(data[,2])), breaks=seq(0, max(data[,2]), min(data[,2]))) +
+             scale_y_reverse("Amplitude") +
+             coord_cartesian(xlim = ranges$x, ylim = ranges$y) +
+             geom_point(data=peakTable(), aes(Wavenumber, Amplitude), shape=1, size=3) +
+             theme(axis.text.x = element_text(size=15)) +
+             theme(axis.text.y = element_text(size=15)) +
+             theme(axis.title.x = element_text(size=15)) +
+             theme(axis.title.y = element_text(size=15, angle=90)) +
+             theme(plot.title=element_text(size=20)) +
+             theme(legend.title=element_text(size=15)) +
+             theme(legend.text=element_text(size=15)) +
+             guides(colour=FALSE)
+             
 
              
-             if(input$combine==FALSE && input$invert==FALSE){
+             if(input$combine==FALSE && input$invert==FALSE && input$showlegend==TRUE){
                  normal
-             } else if(input$combine==TRUE && input$invert==FALSE){
+             } else if(input$combine==TRUE && input$invert==FALSE && input$showlegend==TRUE){
                  combine
-             } else if(input$combine==FALSE && input$invert==TRUE){
+             } else if(input$combine==FALSE && input$invert==TRUE && input$showlegend==TRUE){
                  normal.invert
-             } else if(input$combine==TRUE && input$invert==TRUE){
+             } else if(input$combine==TRUE && input$invert==TRUE && input$showlegend==TRUE){
                  combine.invert
+             } else if(input$combine==FALSE && input$invert==FALSE && input$showlegend==FALSE){
+                 normal.nolegend
+             } else if(input$combine==TRUE && input$invert==FALSE && input$showlegend==FALSE){
+                 combine.nolegend
+             } else if(input$combine==FALSE && input$invert==TRUE && input$showlegend==FALSE){
+                 normal.invert.nolegend
+             } else if(input$combine==TRUE && input$invert==TRUE && input$showlegend==FALSE){
+                 combine.invert.nolegend
              }
              
 
