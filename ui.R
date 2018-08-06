@@ -50,7 +50,7 @@ tags$h3("Manual Changes"), icon = icon("gear"),
 checkboxInput('advanced', "Advanced", value=FALSE),
 uiOutput('gainshiftui'),
 
-selectInput('datatransformations', "Data Transformation", choices=c("None", "Background Subtract", "Derivative", "Log", "e"), selected="None"),
+selectInput('datatransformations', "Data Transformation", choices=c("None", "Savitzky-Golay First Derivative", "MSC", "SNV", "SNV Detrended", "Baseline Corrected", "Velocity",  "Log", "e"), selected="None"),
 checkboxInput('combine', "Combine", value=FALSE),
 checkboxInput('invert', "Invert", value=FALSE),
 tooltip = tooltipOptions(title = "Click for manual options")
@@ -73,7 +73,7 @@ tags$hr(),
 
 uiOutput('filegrab'),
 
-selectInput('filetype', label="Filetype", c("DPT", "CSV", "Opus"), selected="DPT"),
+selectInput('filetype', label="Filetype", c("DPT", "CSV", "Opus"), selected="Opus"),
 
 tags$hr(),
 

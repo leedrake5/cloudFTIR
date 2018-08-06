@@ -24,6 +24,10 @@ library(parallel)
 library(caret)
 library(randomForest)
 library(DescTools)
+library(prospectr)
+library(pls)
+library(baseline)
+
 pdf(NULL)
 options(shiny.maxRequestSize=30*1024^2)
 options(warn=-1)
@@ -266,7 +270,7 @@ shinyServer(function(input, output, session) {
 
         
         
-        dataDerivative <- reactive({
+        dataSGDerivative <- reactive({
             
             data <- icrafFormat()
             
@@ -278,7 +282,64 @@ shinyServer(function(input, output, session) {
             derivative.frame$Wavenumber <- as.numeric(gsub("X", "", derivative.frame$Wavenumber))
             derivative.frame
             
+        })
+        
+        dataMSC <- reactive({
             
+            data <- icrafFormat()
+            
+            msc.data  <- msc(apply(data[,-1], 2, as.numeric))
+            msc.data <- data.frame(Spectrum=data[,1], msc.data)
+            
+            msc.frame <- melt(msc.data, id="Spectrum")
+            colnames(msc.frame) <- c("Spectrum", "Wavenumber", "Amplitude")
+            msc.frame$Wavenumber <- as.numeric(gsub("X", "", msc.frame$Wavenumber))
+            msc.frame
+            
+        })
+        
+        
+        dataSNV <- reactive({
+            
+            data <- icrafFormat()
+            
+            snv.data  <- standardNormalVariate(apply(data[,-1], 2, as.numeric))
+            snv.data <- data.frame(Spectrum=data[,1], snv.data)
+            
+            snv.frame <- melt(snv.data, id="Spectrum")
+            colnames(snv.frame) <- c("Spectrum", "Wavenumber", "Amplitude")
+            snv.frame$Wavenumber <- as.numeric(gsub("X", "", snv.frame$Wavenumber))
+            snv.frame
+            
+        })
+        
+        
+        dataSNVDetrend <- reactive({
+            
+            data <- icrafFormat()
+            
+            snv.data  <- detrend(apply(data[,-1], 2, as.numeric),as.numeric(colnames(data[,-1])))
+            snv.data <- data.frame(Spectrum=data[,1], snv.data)
+            
+            snv.frame <- melt(snv.data, id="Spectrum")
+            colnames(snv.frame) <- c("Spectrum", "Wavenumber", "Amplitude")
+            snv.frame$Wavenumber <- as.numeric(gsub("X", "", snv.frame$Wavenumber))
+            snv.frame
+            
+        })
+        
+        
+        dataBaselineCor <- reactive({
+            
+            data <- icrafFormat()
+            
+            baseline.data  <- baseline(apply(data[,-1], 2, as.numeric))@corrected
+            baseline.data <- data.frame(Spectrum=data[,1], baseline.data)
+            
+            baseline.frame <- melt(baseline.data, id="Spectrum")
+            colnames(baseline.frame) <- c("Spectrum", "Wavenumber", "Amplitude")
+            baseline.frame$Wavenumber <- as.numeric(gsub("X", "", baseline.frame$Wavenumber))
+            baseline.frame
             
         })
         
@@ -325,14 +386,30 @@ shinyServer(function(input, output, session) {
                 dataHold()
             } else if(input$combine==TRUE && input$datatransformations=="None"){
                 dataCombine()
-            }  else if(input$combine==TRUE && input$datatransformations=="Background Subtract"){
+            } else if(input$combine==TRUE && input$datatransformations=="Savitzky-Golay First Derivative"){
+                dataSGDerivative()
+            } else if(input$combine==FALSE && input$datatransformations=="Savitzky-Golay First Derivative"){
+                dataSGDerivative()
+            } else if(input$combine==TRUE && input$datatransformations=="MSC"){
+                dataMSC()
+            } else if(input$combine==FALSE && input$datatransformations=="MSC"){
+                dataMSC()
+            } else if(input$combine==TRUE && input$datatransformations=="SNV"){
+                dataSNV()
+            } else if(input$combine==FALSE && input$datatransformations=="SNV"){
+                dataSNV()
+            } else if(input$combine==TRUE && input$datatransformations=="SNV Detrended"){
+                dataSNVDetrend()
+            } else if(input$combine==FALSE && input$datatransformations=="SNV Detrended"){
+                dataSNVDetrend()
+            } else if(input$combine==TRUE && input$datatransformations=="Baseline Corrected"){
+                dataBaselineCor()
+            } else if(input$combine==FALSE && input$datatransformations=="Baseline Corrected"){
+                dataBaselineCor()
+            } else if(input$combine==TRUE && input$datatransformations=="Velocity"){
                 dataBackgroundSubtract()
-            } else if(input$combine==FALSE && input$datatransformations=="Background Subtract"){
+            } else if(input$combine==FALSE && input$datatransformations=="Velocity"){
                 dataBackgroundSubtract()
-            }  else if(input$combine==TRUE && input$datatransformations=="Derivative"){
-                dataDerivative()
-            } else if(input$combine==FALSE && input$datatransformations=="Derivative"){
-                dataDerivative()
             }  else if(input$combine==TRUE && input$datatransformations=="Log"){
                 dataLog()
             } else if(input$combine==FALSE && input$datatransformations=="Log"){
@@ -4504,9 +4581,10 @@ content = function(file) {
         cal.defs <- wavevalues[["DF"]]
         
         
+        
         calibrationList <- NULL
-        calibrationList <- list(input$filetype, input$calunits, cal.data, cal.intensities, cal.values, cal.defs, calList)
-        names(calibrationList) <- c("FileType", "Units", "Spectra", "Intensities", "Values", "Definitions", "calList")
+        calibrationList <- list(input$filetype, input$datatransformations, input$calunits, cal.data, cal.intensities, cal.values, cal.defs, calList)
+        names(calibrationList) <- c("FileType", "Transformation", "Units", "Spectra", "Intensities", "Values", "Definitions", "calList")
         
         Calibration <<- calibrationList
         
