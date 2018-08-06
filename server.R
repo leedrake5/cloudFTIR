@@ -130,7 +130,6 @@ shinyServer(function(input, output, session) {
     })
     
     
-    
     calFileContents <- reactive({
         
         existingCalFile <- input$calfileinput
@@ -159,6 +158,47 @@ shinyServer(function(input, output, session) {
         Calibration
         
     })
+    
+    output$datatransformationsui <- renderUI({
+        
+        if(!input$usecalfile){
+            selectInput('datatransformations', "Data Transformation", choices=c("None", "Savitzky-Golay First Derivative", "MSC", "SNV", "SNV Detrended", "Baseline Corrected", "Velocity",  "Log", "e"), selected="None")
+        } else if(input$usecalfile && !is.null(calFileContents()$Transformation)){
+            selectInput('datatransformations', "Data Transformation", choices=c("None", "Savitzky-Golay First Derivative", "MSC", "SNV", "SNV Detrended", "Baseline Corrected", "Velocity",  "Log", "e"), selected=calFileContents()$Transformation)
+        } else if(input$usecalfile && is.null(calFileContents()$Transformation)){
+            selectInput('datatransformations', "Data Transformation", choices=c("None", "Savitzky-Golay First Derivative", "MSC", "SNV", "SNV Detrended", "Baseline Corrected", "Velocity",  "Log", "e"), selected="None")
+        } 
+
+    })
+    
+    
+    peakHolder <- reactive({
+        if(is.null(input$showpeaks)){
+            FALSE
+        } else if(!is.null(input$showpeaks)){
+            input$showpeaks
+        }
+        
+    })
+    
+    combineHolder <- reactive({
+        if(is.null(input$combine)){
+            FALSE
+        } else if(!is.null(input$combine)){
+            input$combine
+        }
+        
+    })
+    
+    transformationHolder <- reactive({
+        if(is.null(input$datatransformations)){
+            "None"
+        } else if(!is.null(input$datatransformations)){
+            input$datatransformations
+        }
+        
+    })
+
     
     
     observeEvent(!is.null(input$file1) | !is.null(input$calfileinput), {
@@ -382,41 +422,41 @@ shinyServer(function(input, output, session) {
         
         dataManipulate <- reactive({
             
-            if(input$combine==FALSE && input$datatransformations=="None"){
+            if(combineHolder()==FALSE && transformationHolder()=="None"){
                 dataHold()
-            } else if(input$combine==TRUE && input$datatransformations=="None"){
+            } else if(combineHolder()==TRUE && transformationHolder()=="None"){
                 dataCombine()
-            } else if(input$combine==TRUE && input$datatransformations=="Savitzky-Golay First Derivative"){
+            } else if(combineHolder()==TRUE && transformationHolder()=="Savitzky-Golay First Derivative"){
                 dataSGDerivative()
-            } else if(input$combine==FALSE && input$datatransformations=="Savitzky-Golay First Derivative"){
+            } else if(combineHolder()==FALSE && transformationHolder()=="Savitzky-Golay First Derivative"){
                 dataSGDerivative()
-            } else if(input$combine==TRUE && input$datatransformations=="MSC"){
+            } else if(combineHolder()==TRUE && transformationHolder()=="MSC"){
                 dataMSC()
-            } else if(input$combine==FALSE && input$datatransformations=="MSC"){
+            } else if(combineHolder()==FALSE && transformationHolder()=="MSC"){
                 dataMSC()
-            } else if(input$combine==TRUE && input$datatransformations=="SNV"){
+            } else if(combineHolder()==TRUE && transformationHolder()=="SNV"){
                 dataSNV()
-            } else if(input$combine==FALSE && input$datatransformations=="SNV"){
+            } else if(combineHolder()==FALSE && transformationHolder()=="SNV"){
                 dataSNV()
-            } else if(input$combine==TRUE && input$datatransformations=="SNV Detrended"){
+            } else if(combineHolder()==TRUE && transformationHolder()=="SNV Detrended"){
                 dataSNVDetrend()
-            } else if(input$combine==FALSE && input$datatransformations=="SNV Detrended"){
+            } else if(combineHolder()==FALSE && transformationHolder()=="SNV Detrended"){
                 dataSNVDetrend()
-            } else if(input$combine==TRUE && input$datatransformations=="Baseline Corrected"){
+            } else if(combineHolder()==TRUE && transformationHolder()=="Baseline Corrected"){
                 dataBaselineCor()
-            } else if(input$combine==FALSE && input$datatransformations=="Baseline Corrected"){
+            } else if(combineHolder()==FALSE && transformationHolder()=="Baseline Corrected"){
                 dataBaselineCor()
-            } else if(input$combine==TRUE && input$datatransformations=="Velocity"){
+            } else if(combineHolder()==TRUE && transformationHolder()=="Velocity"){
                 dataBackgroundSubtract()
-            } else if(input$combine==FALSE && input$datatransformations=="Velocity"){
+            } else if(combineHolder()==FALSE && transformationHolder()=="Velocity"){
                 dataBackgroundSubtract()
-            }  else if(input$combine==TRUE && input$datatransformations=="Log"){
+            }  else if(combineHolder()==TRUE && transformationHolder()=="Log"){
                 dataLog()
-            } else if(input$combine==FALSE && input$datatransformations=="Log"){
+            } else if(combineHolder()==FALSE && transformationHolder()=="Log"){
                 dataLog()
-            }  else if(input$combine==TRUE && input$datatransformations=="e"){
+            }  else if(combineHolder()==TRUE && transformationHolder()=="e"){
                 dataExp()
-            } else if(input$combine==FALSE && input$datatransformations=="e"){
+            } else if(combineHolder()==FALSE && transformationHolder()=="e"){
                 dataExp()
             }
             
@@ -434,9 +474,8 @@ shinyServer(function(input, output, session) {
 
 
         dataCount <- reactive({
-            inFile <- input$file1
     
-            length(inFile$datapath)
+            length(dataManipulate()$Spectrum)
     
         })
         
@@ -484,9 +523,9 @@ shinyServer(function(input, output, session) {
         
         findPeaks <- reactive({
            
-           if(input$showpeaks==TRUE){
+           if(peakHolder()){
                idPeaks()
-            } else if(input$showpeaks==FALSE){
+            } else if(!peakHolder()){
                 idNull()
             }
            
@@ -1057,7 +1096,7 @@ shinyServer(function(input, output, session) {
         
         if(input$usecalfile==FALSE){
             waveInput()
-        }else if(input$usecalfile==TRUE){
+        } else if(input$usecalfile==TRUE){
             waveInputCal()
         }
 
@@ -1280,7 +1319,7 @@ shinyServer(function(input, output, session) {
     
     
     outVar <- reactive({
-        input$hotableprocess2
+        input$linecommitwave
         
         myelements <- Wavenumberlinestouse()
         
@@ -1296,7 +1335,7 @@ shinyServer(function(input, output, session) {
     })
     
     outVaralt <- reactive({
-        input$hotableprocess2
+        input$linecommitwave
         
         
         myelements <- c(Wavenumberlinestouse())
@@ -1311,7 +1350,7 @@ shinyServer(function(input, output, session) {
     })
     
     outVaralt2 <- reactive({
-        input$hotableprocess2
+        input$linecommitwave
         
         
         mylines <- c(Wavenumberlinestouse())
@@ -1329,26 +1368,21 @@ shinyServer(function(input, output, session) {
         selectInput(inputId = "calcurveline", label = h4("Line"), choices =  outVar())
     })
     
+    
+    
+    
     inVar3Selectedpre <- reactive({
         
-        hold <- values[["DF"]]
-        
-        optionhold <- if(is.null(input$calcurveline)){
-            ls(hold)[2]
-        }else{
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==TRUE){
             input$calcurveline
-        }
-        
-        if(input$usecalfile==FALSE && is.null(calList[[optionhold]])==TRUE){
-            optionhold
-        } else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==TRUE  && is.null(calFileContents()$calList[[optionhold]])==FALSE){
-            calFileContents()$calList[[optionhold]][[1]]$Intercept
-        } else if(input$usecalfile==FALSE && is.null(calList[[optionhold]])==FALSE){
-            calList[[optionhold]][[1]]$Intercept
-        } else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==FALSE){
-            calList[[optionhold]][[1]]$Intercept
-        } else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==TRUE && is.null(calFileContents()$calList[[optionhold]])==TRUE){
-            optionhold
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE  && is.null(calFileContents()$calList[[input$calcurveline]])==FALSE){
+            calFileContents()$calList[[input$calcurveline]][[1]]$Intercept
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$Intercept
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$Intercept
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
+            input$calcurveline
         }
         
         
@@ -1359,25 +1393,16 @@ shinyServer(function(input, output, session) {
     
     inVar4Selectedpre <- reactive({
         
-        hold <- values[["DF"]]
-        
-        optionhold <- if(is.null(input$calcurveline)){
-            ls(hold)[2]
-        }else{
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==TRUE){
             input$calcurveline
-        }
-        
-        
-        if(input$usecalfile==FALSE && is.null(calList[[optionhold]])==TRUE){
-            optionhold
-        } else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==TRUE && is.null(calFileContents()$calList[[optionhold]])==FALSE){
-            calFileContents()$calList[[optionhold]][[1]]$Slope
-        } else if(input$usecalfile==FALSE && is.null(calList[[optionhold]])==FALSE){
-            calList[[optionhold]][[1]]$Slope
-        } else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==FALSE){
-            calList[[optionhold]][[1]]$Slope
-        }  else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==TRUE && is.null(calFileContents()$calList[[optionhold]])==TRUE){
-            optionhold
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==FALSE){
+            calFileContents()$calList[[input$calcurveline]][[1]]$Slope
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$Slope
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$Slope
+        }  else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
+            input$calcurveline
         }
     })
     
@@ -1396,7 +1421,7 @@ shinyServer(function(input, output, session) {
     calList <- reactiveValues()
     calList <- NULL
     
-    observeEvent(input$hotableprocess2, {
+    observeEvent(input$linecommitwave, {
         
         cal.condition <- 3
         norm.condition <- 1
@@ -1423,48 +1448,33 @@ shinyServer(function(input, output, session) {
     
     normMinPre <- reactive({
         
-        hold <- values[["DF"]]
-        
-        optionhold <- if(is.null(input$calcurveline)){
-            ls(hold)[2]
-        }else{
-            input$calcurveline
-        }
-        
-        if(input$usecalfile==FALSE && is.null(calList[[optionhold]])==TRUE){
-            calConditons[["CalTable"]][["Min"]]
-        }else if(input$usecalfile==TRUE && is.null(calFileContents()$calList[[optionhold]])==FALSE && is.null(calList[[optionhold]])==TRUE){
-            calFileContents()$calList[[optionhold]][[1]]$CalTable$Min
-        } else if(input$usecalfile==FALSE && is.null(calList[[optionhold]])==FALSE){
-            calList[[optionhold]][[1]]$CalTable$Min
-        } else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==FALSE){
-            calList[[optionhold]][[1]]$CalTable$Min
-        } else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==TRUE && is.null(calFileContents()$calList[[optionhold]])==FALSE){
-            calConditons[["CalTable"]][["Min"]]
+
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==TRUE){
+            calConditons[["CalTable"]]["Min"]
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==FALSE){
+            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$Min
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$Min
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$Min
+        }  else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
+            calConditons[["CalTable"]]["Min"]
         }
         
     })
     
     normMaxPre <- reactive({
         
-        hold <- values[["DF"]]
-        
-        optionhold <- if(is.null(input$calcurveline)){
-            ls(hold)[2]
-        }else{
-            input$calcurveline
-        }
-        
-        if(input$usecalfile==FALSE && is.null(calList[[optionhold]])==TRUE){
-            calConditons[["CalTable"]][["Max"]]
-        } else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==TRUE && is.null(calFileContents()$calList[[optionhold]])==FALSE){
-            calFileContents()$calList[[optionhold]][[1]]$CalTable$Max
-        } else if(input$usecalfile==FALSE && is.null(calList[[optionhold]])==FALSE){
-            calList[[optionhold]][[1]]$CalTable$Max
-        } else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==FALSE){
-            calList[[optionhold]][[1]]$CalTable$Max
-        } else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==TRUE && is.null(calFileContents()$calList[[optionhold]])==TRUE){
-            calConditons[["CalTable"]][["Max"]]
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==TRUE){
+            calConditons[["CalTable"]]["Max"]
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==FALSE){
+            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$Max
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$Max
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$Max
+        }  else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
+            calConditons["CalTable"]["Max"]
         }
     })
     
@@ -1550,7 +1560,7 @@ shinyServer(function(input, output, session) {
     
     normhold <- reactiveValues()
     
-    observeEvent(input$hotableprocess2, {
+    observeEvent(input$calcurveline, {
         normhold$norms <- c(normMinPre(), normMaxPre())
         normhold$normtype <- calNormSelectionpre()
     })
@@ -1637,7 +1647,7 @@ shinyServer(function(input, output, session) {
             
             so <- seq(from=1, to=length(a.vector), by=1)
             
-            long <- pblapply(so, function(x) gRbase::combnPrim(x=a.vector, m=x), cl=6L)
+            long <- pblapply(so, function(x) combn(x=a.vector, m=x), cl=6L)
             and <- pblapply(long, function(x) plyr::alply(x, 2), cl=6L)
             thanks.for.all.the.fish <- do.call(list, unlist(and, recursive=FALSE))
             
@@ -1879,7 +1889,7 @@ content = function(file) {
             
             so <- seq(from=2, to=input$nvariables, by=1)
             
-            long <- pblapply(so, function(x) gRbase::combnPrim(x=a.vector, m=x), cl=6L)
+            long <- pblapply(so, function(x) combn(x=a.vector, m=x), cl=6L)
             and <- pblapply(long, function(x) plyr::alply(x, 2), cl=6L)
             thanks.for.all.the.fish <- do.call(list, unlist(and, recursive=FALSE))
             thanks.for.all.the.fish <- pblapply(thanks.for.all.the.fish, function(x) c(input$calcurveline, x))
@@ -2394,17 +2404,17 @@ content = function(file) {
         
         
         if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==TRUE && is.null(calFileContents()$calList[[lineHold()]])==FALSE){
-            calFileContents()$calList[[lineHold()]][[1]][[4]]
+            calFileContents()$calList[[lineHold()]][[1]][["StandardsUsed"]]
         } else if(input$usecalfile==FALSE && is.null(calList[[lineHold()]])==TRUE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
             rep(TRUE, dataCount())
         } else if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
-            calList[[lineHold()]][[1]][[4]]
+            calList[[lineHold()]][[1]][["StandardsUsed"]]
         } else if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==FALSE){
-            calList[[lineHold()]][[1]][[4]]
+            calList[[lineHold()]][[1]][["StandardsUsed"]]
         } else if(input$usecalfile==FALSE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
-            calList[[lineHold()]][[1]][[4]]
+            calList[[lineHold()]][[1]][["StandardsUsed"]]
         } else if(input$usecalfile==FALSE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==FALSE){
-            calList[[lineHold()]][[1]][[4]]
+            calList[[lineHold()]][[1]][["StandardsUsed"]]
         } else if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==TRUE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
             rep(TRUE, dataCount())
         }

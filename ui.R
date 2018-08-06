@@ -45,27 +45,29 @@ tags$hr(),
 
 checkboxInput('showspectralplot', "Show Spectra", value=TRUE),
 
+tags$hr(),
+
 dropdownButton(
-tags$h3("Manual Changes"), icon = icon("gear"),
+tags$h3("Manual Changes"), icon = icon("stats", lib="glyphicon"),
+uiOutput('datatransformationsui'),
 checkboxInput('advanced', "Advanced", value=FALSE),
 uiOutput('gainshiftui'),
-
-selectInput('datatransformations', "Data Transformation", choices=c("None", "Savitzky-Golay First Derivative", "MSC", "SNV", "SNV Detrended", "Baseline Corrected", "Velocity",  "Log", "e"), selected="None"),
 checkboxInput('combine', "Combine", value=FALSE),
 checkboxInput('invert', "Invert", value=FALSE),
-tooltip = tooltipOptions(title = "Click for manual options")
+tooltip = tooltipOptions(title = "Click for transformation options")
 ),
 
+tags$hr(),
+
+dropdownButton(
+tags$h3("Peaks"), icon = icon("screenshot", lib="glyphicon"),
 checkboxInput('showpeaks', "Show Peaks", value=FALSE),
-
-
 sliderInput('spikesensitivity', "Spike Proximity", min=0.1, max=100, value=20),
 #uiOutput('uispikeheight'),
 sliderInput('spikeheight', "Spike Height", min=0, max=1, value=.2),
 sliderInput('wavethreshold', "Accepted Wavenumber Buffer", min=0, max=20, value=3),
-
-
-
+tooltip = tooltipOptions(title = "Click for peak options")
+),
 
 
 
