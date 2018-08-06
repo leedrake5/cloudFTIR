@@ -255,21 +255,30 @@ shinyServer(function(input, output, session) {
         })
         
         
+        icrafFormat <- reactive({
+            
+            data <- dataHold()
+            
+            as.matrix(dcast(data, Spectrum~Wavenumber, value.var="Amplitude", fun.aggregate=mean))
+
+        })
+        
+
+        
+        
         dataDerivative <- reactive({
             
-            data <- if(input$combine==FALSE){
-                dataList()
-            } else if(input$combine==TRUE){
-                dataCombine()
-            }
+            data <- icrafFormat()
             
-            data <- if(input$combine==FALSE){
-                data <- do.call("rbind", lapply(data, function(x) data.frame(Spectrum=x$Spectrum, Wavenumber=x$Wavenumber, Amplitude=diff(x$Amplitude))))
-            } else if(input$combine==TRUE){
-                data$Amplitude <- diff(data$Amplitude)
-            }
+            derivative  <- trans(data[,-1])$trans # uses trans function from soil.spec
+            derivative <- data.frame(Spectrum=data[,1], derivative)
             
-            data
+            derivative.frame <- melt(derivative, id="Spectrum")
+            colnames(derivative.frame) <- c("Spectrum", "Wavenumber", "Amplitude")
+            derivative.frame$Wavenumber <- as.numeric(gsub("X", "", derivative.frame$Wavenumber))
+            derivative.frame
+            
+            
             
         })
         
