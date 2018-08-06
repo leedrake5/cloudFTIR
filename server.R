@@ -120,7 +120,7 @@ shinyServer(function(input, output, session) {
         n <- length(inFile$datapath)
         names <- inFile$name
         
-        myfiles.frame <- as.data.frame(do.call(rbind, pblapply(seq(1, n, 1), function(x) readOpusData(filepath=inFile$datapath[x], filename=inFile$name[x]))))
+        myfiles.frame <- as.data.frame(do.call(rbind, pblapply(seq(1, n, 1), function(x) readOpusData(filepath=inFile$datapath[x], filename=inFile$name[x]), cl=6L)))
         
         myfiles.frame$Wavenumber <- myfiles.frame$Wavenumber + gainshiftHold()
         
