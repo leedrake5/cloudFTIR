@@ -28,6 +28,7 @@ library(prospectr)
 library(pls)
 library(baseline)
 
+
 pdf(NULL)
 options(shiny.maxRequestSize=30*1024^2)
 options(warn=-1)
@@ -120,7 +121,7 @@ shinyServer(function(input, output, session) {
         n <- length(inFile$datapath)
         names <- inFile$name
         
-        myfiles.frame <- as.data.frame(do.call(rbind, pblapply(seq(1, n, 1), function(x) readOpusData(filepath=inFile$datapath[x], filename=inFile$name[x]), cl=6L)))
+        myfiles.frame <- as.data.frame(do.call(rbind, pblapply(seq(1, n, 1), function(x) readOpusData(filepath=inFile$datapath[x], filename=inFile$name[x]), cl=my.cores)))
         
         myfiles.frame$Wavenumber <- myfiles.frame$Wavenumber + gainshiftHold()
         
@@ -1231,10 +1232,10 @@ shinyServer(function(input, output, session) {
         
         hotable.new <- if(input$usecalfile==FALSE){
             data.frame(Include=rep(TRUE, length(hotable.data$Spectrum)), hotable.data)
-        }else if(input$usecalfile==TRUE && colnames(calFileContents()$Values)[1]=="Spectrum"){
+        } else if(input$usecalfile==TRUE && colnames(calFileContents()$Values)[1]=="Spectrum"){
             data.frame(Include=rep(TRUE, length(hotable.data$Spectrum)), hotable.data)
         }else if(input$usecalfile==TRUE && colnames(calFileContents()$Values)[1]=="Include"){
-            data.frame(Include=calFileContents()$Values[,1], hotable.data)
+            data.frame(hotable.data)
         }
         
         
@@ -1305,12 +1306,279 @@ shinyServer(function(input, output, session) {
     })
     
     
+    ####Data Prep
+    
+    
     Wavenumberlinestouse <- reactive({
         
         table <- wavevalues[["DF"]]
         table <- table[complete.cases(table),]
         
         as.vector(table$Name)
+        
+    })
+    
+    
+    #####Set Defaults
+    
+    
+    #calConditons <- reactiveValues()
+    #calList <- reactiveValues()
+    #calList <- NULL
+    
+    #observeEvent(input$linecommitwave, {
+        
+        #cal.condition <- 3
+        #norm.condition <- 1
+        
+        #norm.min <- 2000
+        #norm.max <- 2250
+        
+        #cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max)
+        #colnames(cal.table) <- c("CalType", "NormType", "Min", "Max")
+        
+        #slope.corrections <- NULL
+        #intercept.corrections <- NULL
+        
+        #standards.used <- vals$keeprows
+        
+        #cal.mode.list <- list(cal.table, slope.corrections, intercept.corrections, standards.used)
+        #names(cal.mode.list) <- c("CalTable", "Slope", "Intercept", "StandardsUsed")
+        
+        #calConditons <<- cal.mode.list
+        
+        #})
+    
+    
+    #####Set Defaults
+    
+    
+    calConditons <- reactiveValues()
+    calList <- reactiveValues()
+    calList <- NULL
+    
+    observeEvent(input$calcurveline, {
+        
+        cal.condition <- if(input$usecalfile==FALSE){
+            3
+        } else if(input$usecalfile==TRUE && !is.null(calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$NormType)){
+            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$CalType
+        } else if(input$usecalfile==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$CalType)){
+            3
+        }
+        
+        
+        norm.condition <- if(input$usecalfile==FALSE){
+            1
+        } else if(input$usecalfile==TRUE && !is.null(calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$NormType)){
+            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$NormType
+        } else if(input$usecalfile==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$NormType)){
+            1
+        }
+        
+        
+        norm.min <- if(input$usecalfile==FALSE){
+            2000
+        } else if(input$usecalfile==TRUE && !is.null(calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$Min)){
+            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$Min
+        } else if(input$usecalfile==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$Min)){
+            2000
+        }
+        
+        
+        norm.max <- if(input$usecalfile==FALSE){
+            2250
+        } else if(input$usecalfile==TRUE && !is.null(calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$Max)){
+            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$Max
+        } else if(input$usecalfile==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$Max)){
+            2250
+        }
+        
+        
+        cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max)
+        colnames(cal.table) <- c("CalType", "NormType", "Min", "Max")
+        
+        slope.corrections <- NULL
+        intercept.corrections <- NULL
+        
+        standards.used <- vals$keeprows
+        
+        cal.mode.list <- list(cal.table, slope.corrections, intercept.corrections, standards.used)
+        names(cal.mode.list) <- c("CalTable", "Slope", "Intercept", "StandardsUsed")
+        
+        calConditons <<- cal.mode.list
+        
+    })
+    
+    
+    lineHold <- reactive({
+        
+        if(is.null(input$calcurveline)==TRUE){
+            ls(dataHold())[1]
+        } else{
+            input$calcurveline
+        }
+        
+    })
+    
+    
+    
+    
+    calFileStandards <- reactive({
+        
+        
+        
+        if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==TRUE && is.null(calFileContents()$calList[[lineHold()]])==FALSE){
+            calFileContents()$calList[[lineHold()]][[1]][["StandardsUsed"]]
+        } else if(input$usecalfile==FALSE && is.null(calList[[lineHold()]])==TRUE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
+            rep(TRUE, dataCount())
+        } else if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
+            calList[[lineHold()]][[1]][["StandardsUsed"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==FALSE){
+            calList[[lineHold()]][[1]][["StandardsUsed"]]
+        } else if(input$usecalfile==FALSE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
+            calList[[lineHold()]][[1]][["StandardsUsed"]]
+        } else if(input$usecalfile==FALSE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==FALSE){
+            calList[[lineHold()]][[1]][["StandardsUsed"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==TRUE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
+            rep(TRUE, dataCount())
+        }
+        
+        
+        
+        
+    })
+    
+    
+    
+    
+    vals <- reactiveValues()
+    
+    
+    vals$keeprows <- if(input$usecalfile==TRUE){
+        calFileStandards()
+    }else{
+        rep(TRUE, dataCount())
+    }
+    
+    keepRowsFrame <- reactive({
+        
+        spectra.stuff <- values[["DF"]]
+        rows <- vals$keeprows
+        
+        the.frame <- data.frame(Spectrum=spectra.stuff$Spectrum, Standards=rows)
+        the.frame
+        
+    })
+    
+    
+    output$whichrowstokeep <- renderRHandsontable({
+        
+        DF <- keepRowsFrame()
+        
+        DF <- DF[order(as.character(DF$Spectrum)),]
+        
+        
+        
+        if (!is.null(DF))
+        rhandsontable(DF) %>% hot_col(2:length(DF), renderer=htmlwidgets::JS("safeHtmlRenderer"))
+        
+        
+    })
+    
+    
+    
+    observe({
+        if (!is.null(input$hot)) {
+            DF <- hot_to_r(input$hot)
+        } else {
+            if (input$linecommitwave)
+            DF <- hotableInput()
+            else
+            DF <- values[["DF"]]
+        }
+        values[["DF"]] <- DF
+    })
+    
+    
+    
+    #if(input$hotableprocess2){vals$keeprows <- vals$keeprows[dropStandard()]}
+    
+    
+    output$temp <- renderTable({
+        
+        as.data.frame(vals$keeprows)
+        
+    })
+    
+    
+    dataType <- reactive({
+        if(input$filetype=="DPT"){
+            "Spectra"
+        } else if(input$filetype=="Opus"){
+            "Spectra"
+        } else if(input$filetype=="CSV"){
+            "Spectra"
+        }
+        
+    })
+    
+    
+    
+    concentrationTable <- reactive({
+        
+        concentration.table <- as.data.frame(values[["DF"]], stringsAsFactors=FALSE)
+        concentration.table[concentration.table==""] <- NA
+        concentration.table[values[["DF"]]$Include,]
+        
+    })
+    
+    spectraLineTable <- reactive({
+        
+        spectra.line.table <- if(dataType()=="Spectra"){
+            waveSubset()[values[["DF"]]$Include,]
+        }else if(dataType()=="Net"){
+            dataHold()[values[["DF"]]$Include,]
+        }
+        
+        
+        spectra.line.table <- spectra.line.table[order(as.character(spectra.line.table$Spectrum)),]
+        spectra.line.table
+        
+        
+        
+    })
+    
+    
+    holdFrame <- reactive({
+        
+        spectra.line.table <- spectraLineTable()
+        
+        concentration <- as.vector(as.numeric(unlist(concentrationTable()[,input$calcurveline])))
+        
+        
+        
+        Amplitude <- as.vector(as.numeric(unlist(spectraLineTable()[,input$calcurveline])))
+        
+        spectra.names <- spectra.line.table$Spectrum
+        
+        hold.frame <- data.frame(spectra.names, concentration, Amplitude)
+        colnames(hold.frame) <- c("Spectrum", "Concentration", "Amplitude")
+        hold.frame <- na.omit(hold.frame)
+        
+        hold.frame <- hold.frame[order(as.character(hold.frame$Spectrum)),]
+        
+        
+        hold.frame[complete.cases(hold.frame),]
+        
+        
+    })
+    
+    dataNorm <- reactive({
+        
+        data <- dataHold()
+        data[data$Spectrum %in% holdFrame()$Spectrum, ]
+        
         
     })
     
@@ -1335,7 +1603,7 @@ shinyServer(function(input, output, session) {
     })
     
     outVaralt <- reactive({
-        input$linecommitwave
+        !is.null(dataManipulate())
         
         
         myelements <- c(Wavenumberlinestouse())
@@ -1414,35 +1682,7 @@ shinyServer(function(input, output, session) {
     })
     
     
-    #####Set Defaults
-    
-    
-    calConditons <- reactiveValues()
-    calList <- reactiveValues()
-    calList <- NULL
-    
-    observeEvent(input$linecommitwave, {
-        
-        cal.condition <- 3
-        norm.condition <- 1
-        
-        norm.min <- 2000
-        norm.max <- 2250
-        
-        cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max)
-        colnames(cal.table) <- c("CalType", "NormType", "Min", "Max")
-        
-        slope.corrections <- NULL
-        intercept.corrections <- NULL
-        
-        standards.used <- vals$keeprows
-        
-        cal.mode.list <- list(cal.table, slope.corrections, intercept.corrections, standards.used)
-        names(cal.mode.list) <- c("CalTable", "Slope", "Intercept", "StandardsUsed")
-        
-        calConditons <<- cal.mode.list
-        
-    })
+  
     
     ########Machine Learning: Normalization
     
@@ -1599,15 +1839,15 @@ shinyServer(function(input, output, session) {
             input$calcurveline
         }
         
-        if(input$usecalfile==FALSE && is.null(calList[[optionhold]])==TRUE){
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["NormType"]]
-        }else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==TRUE && is.null(calFileContents()$calList[[optionhold]])==FALSE){
-            calFileContents()$calList[[optionhold]][[1]]$CalTable$NormType
-        } else if(input$usecalfile==FALSE && is.null(calList[[optionhold]])==FALSE){
-            calList[[optionhold]][[1]]$CalTable$NormType
-        } else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==FALSE){
-            calList[[optionhold]][[1]]$CalTable$NormType
-        } else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==TRUE && is.null(calFileContents()$calList[[optionhold]])==TRUE){
+        }else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==FALSE){
+            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$NormType
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$NormType
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$NormType
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["NormType"]]
         }
         
@@ -1807,7 +2047,6 @@ importanceFrame <- reactive({
     colnames(importance.frame) <- c("NodePurity")
     importance.frame$Wavenumber <- as.numeric(gsub("X", "", rownames(importance.frame)))
     importance.frame
-    
 })
 
 rainForestImportancePlot <- reactive({
@@ -2003,6 +2242,7 @@ content = function(file) {
     
     
     
+    
     #####Machine Learning: Cal Type
     
     
@@ -2016,15 +2256,15 @@ content = function(file) {
             input$calcurveline
         }
         
-        if(input$usecalfile==FALSE && is.null(calList[[optionhold]])==TRUE){
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["CalType"]]
-        } else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==TRUE && is.null(calFileContents()$calList[[optionhold]])==FALSE){
-            calFileContents()$calList[[optionhold]][[1]]$CalTable$CalType
-        } else if(input$usecalfile==FALSE && is.null(calList[[optionhold]])==FALSE){
-            calList[[optionhold]][[1]]$CalTable$CalType
-        } else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==FALSE){
-            calList[[optionhold]][[1]]$CalTable$CalType
-        } else if(input$usecalfile==TRUE && is.null(calList[[optionhold]])==TRUE && is.null(calFileContents()$calList[[optionhold]])==TRUE){
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==FALSE){
+            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$CalType
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$CalType
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$CalType
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[optionhold]])==TRUE){
             calConditons[["CalTable"]][["CalType"]]
         }
         
@@ -2130,7 +2370,7 @@ content = function(file) {
         spectra.line.table <- spectraLineTable()
         
         
-        predict.amplitude.forest <- predictAmplitudeSimp()
+        predict.amplitude.forest <- predictAmplitudeForest()
         
         predict.frame.forest <- data.frame(predict.amplitude.forest, Concentration=concentration.table[,input$calcurveline])
         predict.frame.forest <- predict.frame.forest[complete.cases(predict.frame.forest),]
@@ -2142,8 +2382,15 @@ content = function(file) {
     })
     
     forestModel <- reactive({
+        predict.frame <- predictFrameForest()
         
-        randomForest(Concentration~., data=predictFrameForest(), na.action=na.omit, ntree=1000, nPerm=100)
+        #ntree <- rep(1000/as.numeric(my.cores), as.numeric(my.cores))
+        #foreach(ntree=ntree, .combine=combine, .multicombine=TRUE,
+        #.packages='randomForest') %dopar% {
+        #    randomForest(Concentration~., data=predict.frame, na.action=na.omit, ntree=ntree, nPerm=10, norm.votes=FALSE)
+            
+            #}
+        randomForest(Concentration~., data=predictFrameForest(), na.action=na.omit, ntree=1000, nPerm=10)
         
     })
     
@@ -2180,12 +2427,8 @@ content = function(file) {
         lm(Concentration~., data=predictFrameLuc(), na.action=na.exclude)
     })
     
-    
-    rainforestData <- reactive({
-        
-        concentration.table <- concentrationTable()
+    rainforestAmplitude <- reactive({
         data <- dataNorm()
-        spectra.line.table <- spectraLineTable()
         
         spectra.data <- if(input$normcal==1){
             if(dataType()=="Spectra"){
@@ -2206,19 +2449,52 @@ content = function(file) {
                 NULL
             }
         }
+        spectra.data
+
+        
+    })
+    
+    
+    rainforestData <- reactive({
+        
+        concentration.table <- concentrationTable()
+        data <- dataNorm()
+        spectra.line.table <- spectraLineTable()
+        
+        spectra.data <- rainforestAmplitude()
         
         spectra.data$Concentration <- concentration.table[complete.cases(concentration.table[,input$calcurveline]),input$calcurveline]
         spectra.data <- spectra.data[complete.cases(spectra.data$Concentration),]
         spectra.data <- spectra.data[vals$keeprows,]
-        
         spectra.data
         
     })
     
     
     rainforestModel <- reactive({
+        spectra.data <- rainforestData()
+        index <- rep(1000/as.numeric(my.cores), as.numeric(my.cores))
         
-        randomForest(Concentration~., data=rainforestData(), na.action=na.omit, ntree=1000, nPerm=100)
+        #do.call(combine, pblapply(rep(1000/as.numeric(my.cores), as.numeric(my.cores)), function(x) randomForest(Concentration~., data=spectra.data, na.action=na.omit, ntree=x, nPerm=10, norm.votes=FALSE), cl=my.cores))
+
+        #forest.list <- pblapply(index, function(x) randomForest(Concentration~., data=spectra.data, na.action=na.omit, ntree=x, nPerm=10, norm.votes=FALSE), cl=my.cores)
+        #my_combine(forest.list)
+        #ntree <- rep(1000/as.numeric(my.cores), as.numeric(my.cores))
+        #rf.formula <- as.formula(paste("Concentration","~",paste(".")))
+        #foreach(ntree=ntree, .combine=combine, .multicombine=TRUE,
+        #.packages='randomForest') %dopar% {
+        #   environment(rf.formula) <- environment()
+        #    randomForest(rf.formula, data=spectra.data, na.action=na.omit, ntree=ntree, nPerm=10, norm.votes=FALSE)
+        #}
+        
+        
+        
+
+
+        #result <- do.call(what=randomForest::combine, args=forest.list)
+        #result
+
+        randomForest(Concentration~., data=rainforestData(), na.action=na.omit, ntree=1000, nPerm=10)
         
     })
     
@@ -2244,6 +2520,8 @@ content = function(file) {
         
         predict.amplitude.forest <- predictAmplitudeForest()
         
+        predict.amplitude.rainforest <- rainforestAmplitude()
+        
         spectra.data <- rainforestData()
         spectra.data <- spectra.data[complete.cases(spectra.data),]
         
@@ -2257,23 +2535,23 @@ content = function(file) {
         predict.frame.rainforest <- rainforestData()
         
         cal.lm.simp <- simpleLinearModel()
-        lm.predict <- predict(cal.lm.simp, newdata=predict.frame.simp)
+        lm.predict <- predict(cal.lm.simp, newdata=predict.amplitude.simp)
         lm.sum <- summary(lm(predict.frame.simp$Concentration~lm.predict, na.action=na.exclude))
         
         cal.lm.two <- nonLinearModel()
-        lm2.predict <- predict(cal.lm.two, newdata=predict.frame.simp)
+        lm2.predict <- predict(cal.lm.two, newdata=predict.amplitude.simp)
         lm2.sum <- summary(lm(predict.frame.simp$Concentration~lm2.predict, na.action=na.exclude))
         
         cal.lm.luc <- lucasToothModel()
-        lucas.predict <- predict(cal.lm.luc, newdata=predict.frame.luc)
+        lucas.predict <- predict(cal.lm.luc, newdata=predict.amplitude.luc)
         lucas.sum <- summary(lm(predict.frame.luc$Concentration~lucas.predict, na.action=na.exclude))
         
         cal.lm.forest <- forestModel()
-        forest.predict <- predict(cal.lm.forest, newdata=predict.frame.forest)
+        forest.predict <- predict(cal.lm.forest, newdata=predict.amplitude.forest)
         forest.sum <- summary(lm(predict.frame.forest$Concentration~forest.predict, na.action=na.exclude))
         
         cal.lm.rainforest <- rainforestModel()
-        rainforest.predict <- predict(cal.lm.rainforest, newdata=predict.frame.rainforest)
+        rainforest.predict <- predict(cal.lm.rainforest, newdata=predict.amplitude.rainforest)
         rainforest.sum <- summary(lm(predict.frame.rainforest$Concentration~rainforest.predict, na.action=na.exclude))
         
         
@@ -2317,10 +2595,7 @@ content = function(file) {
     
     testing2 <- reactive({
         
-        predict.frame <- predictFrame()
-        predict.frame <- predict.frame[complete.cases(predict.frame$Concentration),]
-        
-        predict.frame
+        rainforestData()
         
     })
     
@@ -2349,7 +2624,7 @@ content = function(file) {
     
     calhold <- reactiveValues()
     
-    observeEvent(input$hotableprocess2, {
+    observeEvent(input$calcurveline, {
         calhold$caltype <- calTypeSelectionPre()
     })
     
@@ -2377,186 +2652,7 @@ content = function(file) {
     })
     
     
-    
-
-    
-    
-    
-    
-    
-    
-    
-    lineHold <- reactive({
-        
-        if(is.null(input$calcurveline)==TRUE){
-            ls(dataHold())[1]
-        } else{
-            input$calcurveline
-        }
-        
-    })
-    
-    
-    
-    
-    calFileStandards <- reactive({
-        
-        
-        
-        if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==TRUE && is.null(calFileContents()$calList[[lineHold()]])==FALSE){
-            calFileContents()$calList[[lineHold()]][[1]][["StandardsUsed"]]
-        } else if(input$usecalfile==FALSE && is.null(calList[[lineHold()]])==TRUE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
-            rep(TRUE, dataCount())
-        } else if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
-            calList[[lineHold()]][[1]][["StandardsUsed"]]
-        } else if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==FALSE){
-            calList[[lineHold()]][[1]][["StandardsUsed"]]
-        } else if(input$usecalfile==FALSE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
-            calList[[lineHold()]][[1]][["StandardsUsed"]]
-        } else if(input$usecalfile==FALSE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==FALSE){
-            calList[[lineHold()]][[1]][["StandardsUsed"]]
-        } else if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==TRUE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
-            rep(TRUE, dataCount())
-        }
-        
-        
-        
-        
-    })
-    
-    
-    
-    
-    vals <- reactiveValues()
-    
-    
-    vals$keeprows <- if(input$usecalfile==TRUE){
-        calFileStandards()
-    }else{
-        rep(TRUE, dataCount())
-    }
-    
-    keepRowsFrame <- reactive({
-        
-        spectra.stuff <- values[["DF"]]
-        rows <- vals$keeprows
-        
-        the.frame <- data.frame(Spectrum=spectra.stuff$Spectrum, Standards=rows)
-        the.frame
-        
-    })
-    
-    
-    output$whichrowstokeep <- renderRHandsontable({
-        
-        DF <- keepRowsFrame()
-        
-        DF <- DF[order(as.character(DF$Spectrum)),]
-        
-        
-        
-        if (!is.null(DF))
-        rhandsontable(DF) %>% hot_col(2:length(DF), renderer=htmlwidgets::JS("safeHtmlRenderer"))
-        
-        
-    })
-    
-    
-    
-    observe({
-        if (!is.null(input$hot)) {
-            DF <- hot_to_r(input$hot)
-        } else {
-            if (input$linecommitwave)
-            DF <- hotableInput()
-            else
-            DF <- values[["DF"]]
-        }
-        values[["DF"]] <- DF
-    })
-    
-    
-    
-    #if(input$hotableprocess2){vals$keeprows <- vals$keeprows[dropStandard()]}
-    
-    
-    output$temp <- renderTable({
-        
-        as.data.frame(vals$keeprows)
-        
-    })
-    
-    
-    dataType <- reactive({
-        if(input$filetype=="DPT"){
-            "Spectra"
-        } else if(input$filetype=="Opus"){
-            "Spectra"
-        } else if(input$filetype=="CSV"){
-            "Spectra"
-        }
-        
-    })
-    
-    
-    
-    concentrationTable <- reactive({
-        
-        concentration.table <- as.data.frame(values[["DF"]], stringsAsFactors=FALSE)
-        concentration.table[concentration.table==""] <- NA
-        concentration.table[values[["DF"]]$Include,]
-        
-    })
-    
-    spectraLineTable <- reactive({
-        
-        spectra.line.table <- if(dataType()=="Spectra"){
-            waveSubset()[values[["DF"]]$Include,]
-        }else if(dataType()=="Net"){
-            dataHold()[values[["DF"]]$Include,]
-        }
-        
-        
-        spectra.line.table <- spectra.line.table[order(as.character(spectra.line.table$Spectrum)),]
-        spectra.line.table
-        
-        
-        
-    })
-    
-    
-    holdFrame <- reactive({
-        
-        spectra.line.table <- spectraLineTable()
-        
-        concentration <- as.vector(as.numeric(unlist(concentrationTable()[,input$calcurveline])))
-        
-        
-        
-        Amplitude <- as.vector(as.numeric(unlist(spectraLineTable()[,input$calcurveline])))
-        
-        spectra.names <- spectra.line.table$Spectrum
-        
-        hold.frame <- data.frame(spectra.names, concentration, Amplitude)
-        colnames(hold.frame) <- c("Spectrum", "Concentration", "Amplitude")
-        hold.frame <- na.omit(hold.frame)
-        
-        hold.frame <- hold.frame[order(as.character(hold.frame$Spectrum)),]
-        
-        
-        hold.frame[complete.cases(hold.frame),]
-        
-        
-    })
-    
-    dataNorm <- reactive({
-        
-        data <- dataHold()
-        data[data$Spectrum %in% holdFrame()$Spectrum, ]
-        
-        
-    })
-    
+  
     
     predictFramePre <- reactive({
         
@@ -2577,168 +2673,34 @@ content = function(file) {
     
     predictAmplitude <- reactive({
         
-        spectra.line.table <- spectraLineTable()
-        data <- dataNorm()
-        
-        
-        spectra.line.table <- spectraLineTable()[spectraLineTable()$Spectrum %in% holdFrame()$Spectrum, ]
-        
-        lines <- names(spectra.line.table[,-1])
-        
-        
         if (input$radiocal==1){
-            
-            if(input$normcal==1){
-                predict.amplitude <- if(dataType()=="Spectra"){
-                    general_prep_ftir(spectra.line.table=spectra.line.table, element.line=input$calcurveline)
-                } else if(dataType()=="Net"){
-                    general_prep_ftir_net(spectra.line.table=spectra.line.table, element.line=input$calcurveline)
-                }
-            }
-            
-            if(input$normcal==2){
-                predict.amplitude <- if(dataType()=="Spectra"){
-                    simple_tc_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline)
-                } else if(dataType()=="Net"){
-                    simple_tc_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline)
-                }
-            }
-            
-            if(input$normcal==3){
-                predict.amplitude <- if(dataType()=="Spectra"){
-                    simple_comp_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, norm.min=input$comptonmin, norm.max=input$comptonmax)
-                } else if(dataType()=="Net"){
-                    simple_comp_prep_ftir_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, norm.min=input$comptonmin, norm.max=input$comptonmax)
-                }
-            }
-            
+            predictAmplitudeSimp()
+        } else if (input$radiocal==2){
+            predictAmplitudeSimp()
+        } else if (input$radiocal==3){
+            predictAmplitudeLuc()
+        } else if (input$radiocal==4){
+            predictAmplitudeForest()
+        } else if (input$radiocal==5){
+            rainforestAmplitude()
         }
-        
-        if (input$radiocal==2){
-            
-            if(input$normcal==1){
-                predict.amplitude <- if(dataType()=="Spectra"){
-                    general_prep_ftir(spectra.line.table=spectra.line.table, element.line=input$calcurveline)
-                } else if(dataType()=="Net"){
-                    general_prep_ftir_net(spectra.line.table=spectra.line.table, element.line=input$calcurveline)
-                }
-            }
-            
-            if(input$normcal==2){
-                predict.amplitude <- if(dataType()=="Spectra"){
-                    simple_tc_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline)
-                } else if(dataType()=="Net"){
-                    simple_tc_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline)
-                }
-            }
-            
-            if(input$normcal==3){
-                predict.amplitude <- if(dataType()=="Spectra"){
-                    simple_comp_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, norm.min=input$comptonmin, norm.max=input$comptonmax)
-                } else if(dataType()=="Net"){
-                    simple_comp_prep_ftir_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, norm.min=input$comptonmin, norm.max=input$comptonmax)
-                }
-            }
-            
-        }
-        
-        
-        if (input$radiocal==3){
-            
-            if(input$normcal==1){
-                predict.amplitude <- if(dataType()=="Spectra"){
-                    lucas_simp_prep_ftir(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars)
-                } else if(dataType()=="Net"){
-                    lucas_simp_prep_ftir_net(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars)
-                }
-            }
-            
-            if(input$normcal==2){
-                predict.amplitude <- if(dataType()=="Spectra"){
-                    lucas_tc_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars)
-                } else if(dataType()=="Net"){
-                    lucas_tc_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars)
-                }
-            }
-            
-            if(input$normcal==3){
-                predict.amplitude <- if(dataType()=="Spectra"){
-                    lucas_comp_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
-                } else if(dataType()=="Net"){
-                    lucas_comp_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=input$slope_vars, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
-                }
-            }
-            
-        }
-        
-        if (input$radiocal==4){
-            concentration.table <- concentrationTable()
-            concentration.table <- concentration.table[complete.cases(concentration.table[, input$calcurveline]),]
-            spectra.line.table <- spectra.line.table[complete.cases(concentration.table[, input$calcurveline]),]
-            data <- data[data$Spectrum %in% concentration.table$Spectrum, ]
-            
-            predict.amplitude <- if(input$normcal==1){
-                if(dataType()=="Spectra"){
-                    lucas_simp_prep_ftir(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars)
-                } else if(dataType()=="Net"){
-                    lucas_simp_prep_ftir_net(spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars)
-                }
-            } else if(input$normcal==2){
-                predict.amplitude <- if(dataType()=="Spectra"){
-                    lucas_tc_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars)
-                } else if(dataType()=="Net"){
-                    lucas_tc_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars)
-                }
-            } else if(input$normcal==3){
-                predict.amplitude <- if(dataType()=="Spectra"){
-                    lucas_comp_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
-                } else if(dataType()=="Net"){
-                    lucas_comp_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=lines, intercept.element.lines=input$intercept_vars, norm.min=input$comptonmin, norm.max=input$comptonmax)
-                }
-            }
-            
-        }
-        
-        if (input$radiocal==5){
-            if(input$normcal==1){
-                predict.amplitude <- if(dataType()=="Spectra"){
-                    spectra_simp_prep_ftir(spectra=dataNorm())[,-1]
-                } else if(dataType()=="Net"){
-                    NULL
-                }
-            } else if(input$normcal==2){
-                predict.amplitude <- if(dataType()=="Spectra"){
-                    spectra_tc_prep_ftir(spectra=dataNorm())[,-1]
-                } else if(dataType()=="Net"){
-                    NULL
-                }
-            } else if(input$normcal==3){
-                predict.amplitude <- if(dataType()=="Spectra"){
-                    spectra_comp_prep_ftir(spectra=dataNorm(), norm.min=input$comptonmin, norm.max=input$comptonmax)[,-1]
-                } else if(dataType()=="Net"){
-                    NULL
-                }
-            }
-        }
-        
-        predict.amplitude
         
     })
     
     
     predictFrame <- reactive({
         
-        predict.frame <- predictFramePre()
-        predict.amplitude <- predictAmplitude()
-        
-        
-        
-        predict.frame <- data.frame(predict.amplitude, predict.frame$Concentration)
-        colnames(predict.frame) <- c(names(predict.amplitude), "Concentration")
-        
-        
-        
-        predict.frame
+        if (input$radiocal==1){
+            predictFrameSimp()
+        } else if (input$radiocal==2){
+            predictFrameSimp()
+        } else if (input$radiocal==3){
+            predictFrameLuc()
+        } else if (input$radiocal==4){
+            predictFrameForest()
+        } else if (input$radiocal==5){
+            rainforestData()
+        }
         
         
     })
@@ -2770,13 +2732,13 @@ content = function(file) {
         
         if (input$radiocal==1){
             simpleLinearModel()
-        } else if (input$radiocal==2){
+        } else if(input$radiocal==2){
             nonLinearModel()
-        } else if (input$radiocal==3){
+        } else if(input$radiocal==3){
             lucasToothModel()
-        } else if (input$radiocal==4){
+        } else if(input$radiocal==4){
             forestModel()
-        } else if (input$radiocal==5){
+        } else if(input$radiocal==5){
             rainforestModel()
         }
         
@@ -2809,18 +2771,7 @@ content = function(file) {
         }
         
         if (input$radiocal==3){
-            
-            xmin = 0; xmax=10
-            N = length(predict.frame$Concentration)
-            means = colMeans(predict.frame)
-            dummyDF = t(as.data.frame(means))
-            for(i in 2:N){dummyDF=rbind(dummyDF,means)}
-            xv=seq(xmin,xmax, length.out=N)
-            dummyDF$Concentration = xv
-            yv=predict(line.model, newdata=predict.amplitude)
-            
-            
-            lucas.x <- yv
+
             
             cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
             cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
@@ -2829,57 +2780,37 @@ content = function(file) {
             cal.est.conc.luc.low <- cal.est.conc.tab$lwr
             
             
-            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, lucas.x, cal.est.conc.luc, cal.est.conc.luc.up, cal.est.conc.luc.low)
+            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, cal.est.conc.luc, cal.est.conc.luc, cal.est.conc.luc.up, cal.est.conc.luc.low)
             colnames(val.frame) <- c("Concentration", "Amplitude", "AmplitudeNorm", "Prediction", "Upper", "Lower")
         }
         
         if (input$radiocal==4){
             
-            xmin = 0; xmax=10
-            N = length(predict.frame$Concentration)
-            means = colMeans(predict.frame)
-            dummyDF = t(as.data.frame(means))
-            for(i in 2:N){dummyDF=rbind(dummyDF,means)}
-            xv=seq(xmin,xmax, length.out=N)
-            dummyDF$Concentration = xv
-            yv=predict(line.model, newdata=predict.amplitude)
             
-            
-            lucas.x <- yv
-            
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitudes)
             #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
             #cal.est.conc.luc <- cal.est.conc.tab$fit
             #cal.est.conc.luc.up <- cal.est.conc.tab$upr
             #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
             
             
-            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, lucas.x, as.vector(cal.est.conc.pred.luc))
+            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
             colnames(val.frame) <- c("Concentration", "Amplitude", "AmplitudeNorm", "Prediction")
+            val.frame
         }
         
         
         if (input$radiocal==5){
-            xmin = 0; xmax=10
-            N = length(predict.frame$Concentration)
-            means = colMeans(predict.amplitude)
-            dummyDF = t(as.data.frame(means))
-            for(i in 2:N){dummyDF=rbind(dummyDF,means)}
-            xv=seq(xmin,xmax, length.out=N)
-            dummyDF$Concentration = xv
-            yv=predict(line.model, newdata=predict.amplitude)
+
             
-            
-            lucas.x <- yv
-            
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude)
             #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
             #cal.est.conc.luc <- cal.est.conc.tab$fit
             #cal.est.conc.luc.up <- cal.est.conc.tab$upr
             #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
             
             
-            val.frame <- data.frame(predict.frame$Concentration, lucas.x, as.vector(cal.est.conc.pred.luc))
+            val.frame <- data.frame(predict.frame$Concentration, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
             colnames(val.frame) <- c("Concentration", "AmplitudeNorm", "Prediction")
         }
         
@@ -2921,7 +2852,6 @@ content = function(file) {
     calCurvePlot <- reactive({
         
         predict.frame <- predictFrame()
-        line.model <- lineModel()
         val.frame <- valFrame()
         
         element.name <-input$calcurveline
@@ -2981,7 +2911,7 @@ content = function(file) {
         if(input$radiocal==4){
             calcurve.plot <- ggplot(data=val.frame[ vals$keeprows, , drop = FALSE], aes(AmplitudeNorm, Concentration)) +
             theme_light() +
-            annotate("text", label=lm_eqn(lm(Concentration~., val.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            annotate("text", label=lm_eqn(lm(Concentration~AmplitudeNorm, val.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
             geom_point() +
             geom_point(aes(AmplitudeNorm, Concentration), data = val.frame[!vals$keeprows, , drop = FALSE], shape = 21, fill = "red", color = "black", alpha = 0.25) +
             geom_smooth() +
@@ -2994,7 +2924,7 @@ content = function(file) {
         if(input$radiocal==5){
             calcurve.plot <- ggplot(data=val.frame[ vals$keeprows, , drop = FALSE], aes(AmplitudeNorm, Concentration)) +
             theme_light() +
-            annotate("text", label=lm_eqn(lm(Concentration~., val.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            annotate("text", label=lm_eqn(lm(Concentration~AmplitudeNorm, val.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
             geom_point() +
             geom_point(aes(AmplitudeNorm, Concentration), data = val.frame[!vals$keeprows, , drop = FALSE], shape = 21, fill = "red", color = "black", alpha = 0.25) +
             geom_smooth() +
@@ -3034,8 +2964,6 @@ content = function(file) {
     valCurvePlot <- reactive({
         
         predict.frame <- predictFrame()
-        line.model <- lineModel()
-        
         
         
         element.name <-input$calcurveline
@@ -3177,11 +3105,12 @@ content = function(file) {
         }
         
         if (input$radiocal==4){
-            cal.lm <- randomForest(Concentration~., data=predict.frame, na.action=na.omit, ntrees=1000)
+            randomForest(Concentration~., data=predict.frame, na.action=na.omit, ntree=1000, nPerm=10, norm.votes=FALSE)
         }
         
         if (input$radiocal==5){
-            cal.lm <- randomForest(Concentration~., data=predict.frame, na.action=na.omit, ntrees=1000)
+            randomForest(Concentration~., data=predict.frame, na.action=na.omit, ntree=1000, nPerm=10, norm.votes=FALSE)
+
         }
         
         cal.lm
@@ -3333,18 +3262,6 @@ content = function(file) {
         
         if (input$radiocal==3){
             
-            xmin = 0; xmax=10
-            N = length(predict.frame$Concentration)
-            means = colMeans(predict.frame)
-            dummyDF = t(as.data.frame(means))
-            for(i in 2:N){dummyDF=rbind(dummyDF,means)}
-            xv=seq(xmin,xmax, length.out=N)
-            dummyDF$Concentration = xv
-            yv=predict(line.model, newdata=predict.amplitude)
-            
-            
-            lucas.x <- yv
-            
             cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
             cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
             cal.est.conc.luc <- cal.est.conc.tab$fit
@@ -3352,51 +3269,29 @@ content = function(file) {
             cal.est.conc.luc.low <- cal.est.conc.tab$lwr
             
             
-            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, lucas.x, cal.est.conc.luc, cal.est.conc.luc.up, cal.est.conc.luc.low)
+            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, cal.est.conc.luc, cal.est.conc.luc, cal.est.conc.luc.up, cal.est.conc.luc.low)
             colnames(val.frame) <- c("Concentration", "Amplitude", "AmplitudeNorm", "Prediction", "Upper", "Lower")
         }
         
         if (input$radiocal==4){
             
-            xmin = 0; xmax=10
-            N = length(predict.frame$Concentration)
-            means = colMeans(predict.frame)
-            dummyDF = t(as.data.frame(means))
-            for(i in 2:N){dummyDF=rbind(dummyDF,means)}
-            xv=seq(xmin,xmax, length.out=N)
-            dummyDF$Concentration = xv
-            yv=predict(line.model, newdata=predict.amplitude)
-            
-            
-            lucas.x <- yv
-            
+
             cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
             
             
             
-            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, lucas.x, as.vector(cal.est.conc.pred.luc))
+            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
             colnames(val.frame) <- c("Concentration", "Amplitude", "AmplitudeNorm", "Prediction")
         }
         
         if (input$radiocal==5){
             
-            xmin = 0; xmax=10
-            N = length(predict.frame$Concentration)
-            means = colMeans(predict.frame)
-            dummyDF = t(as.data.frame(means))
-            for(i in 2:N){dummyDF=rbind(dummyDF,means)}
-            xv=seq(xmin,xmax, length.out=N)
-            dummyDF$Concentration = xv
-            yv=predict(line.model, newdata=predict.amplitude)
 
-            
-            lucas.x <- yv
-            
             cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
             
             
             
-            val.frame <- data.frame(predict.frame$Concentration, lucas.x, as.vector(cal.est.conc.pred.luc))
+            val.frame <- data.frame(predict.frame$Concentration, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
             colnames(val.frame) <- c("Concentration", "AmplitudeNorm", "Prediction")
         }
         
@@ -3474,7 +3369,7 @@ content = function(file) {
             
             calcurve.plot <- ggplot(data=val.frame, aes(AmplitudeNorm, Concentration)) +
             theme_light() +
-            annotate("text", label=lm_eqn(lm(Concentration~., val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            annotate("text", label=lm_eqn(lm(Concentration~AmplitudeNorm, val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
             geom_point() +
             geom_point(aes(AmplitudeNorm, Concentration), data = val.frame, shape = 21, fill = "red", color = "black", alpha = 0.25) +
             geom_smooth() +
@@ -3488,7 +3383,7 @@ content = function(file) {
             
             calcurve.plot <- ggplot(data=val.frame, aes(AmplitudeNorm, Concentration)) +
             theme_light() +
-            annotate("text", label=lm_eqn(lm(Concentration~., val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            annotate("text", label=lm_eqn(lm(Concentration~AmplitudeNorm, val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
             geom_point() +
             geom_point(aes(AmplitudeNorm, Concentration), data = val.frame, shape = 21, fill = "red", color = "black", alpha = 0.25) +
             geom_smooth() +

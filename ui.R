@@ -246,6 +246,7 @@ uiOutput('inVar4')
 
 mainPanel(
 tabsetPanel(
+#tabPanel("testing", dataTableOutput('testtable2')),
 tabPanel("Cal Curves",
 splitLayout(cellWidths = c("50%", "50%"),
 column(width=12,
@@ -345,9 +346,9 @@ actionButton("exclude_toggle_diag", "Toggle points"),
 actionButton("exclude_reset_diag", "Reset")),
 
 tabPanel("Variables",
-    div(
-    style = "position:relative",
-    plotOutput('importanceplot', hover = hoverOpts('plot_hover_variable', delay = 100, delayType = "debounce")),
+div(
+style = "position:relative",
+plotOutput('importanceplot', hover = hoverOpts('plot_hover_variable', delay = 100, delayType = "debounce")),
 uiOutput('hover_info_variable')),
 tags$hr(),
 downloadButton('variablePlot', "Plot")
