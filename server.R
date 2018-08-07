@@ -1322,78 +1322,17 @@ shinyServer(function(input, output, session) {
     #####Set Defaults
     
     
-    #calConditons <- reactiveValues()
-    #calList <- reactiveValues()
-    #calList <- NULL
-    
-    #observeEvent(input$linecommitwave, {
-        
-        #cal.condition <- 3
-        #norm.condition <- 1
-        
-        #norm.min <- 2000
-        #norm.max <- 2250
-        
-        #cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max)
-        #colnames(cal.table) <- c("CalType", "NormType", "Min", "Max")
-        
-        #slope.corrections <- NULL
-        #intercept.corrections <- NULL
-        
-        #standards.used <- vals$keeprows
-        
-        #cal.mode.list <- list(cal.table, slope.corrections, intercept.corrections, standards.used)
-        #names(cal.mode.list) <- c("CalTable", "Slope", "Intercept", "StandardsUsed")
-        
-        #calConditons <<- cal.mode.list
-        
-        #})
-    
-    
-    #####Set Defaults
-    
-    
     calConditons <- reactiveValues()
     calList <- reactiveValues()
     calList <- NULL
     
-    observeEvent(input$calcurveline, {
+    observeEvent(input$linecommitwave, {
         
-        cal.condition <- if(input$usecalfile==FALSE){
-            3
-        } else if(input$usecalfile==TRUE && !is.null(calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$NormType)){
-            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$CalType
-        } else if(input$usecalfile==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$CalType)){
-            3
-        }
+        cal.condition <- 3
+        norm.condition <- 1
         
-        
-        norm.condition <- if(input$usecalfile==FALSE){
-            1
-        } else if(input$usecalfile==TRUE && !is.null(calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$NormType)){
-            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$NormType
-        } else if(input$usecalfile==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$NormType)){
-            1
-        }
-        
-        
-        norm.min <- if(input$usecalfile==FALSE){
-            2000
-        } else if(input$usecalfile==TRUE && !is.null(calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$Min)){
-            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$Min
-        } else if(input$usecalfile==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$Min)){
-            2000
-        }
-        
-        
-        norm.max <- if(input$usecalfile==FALSE){
-            2250
-        } else if(input$usecalfile==TRUE && !is.null(calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$Max)){
-            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$Max
-        } else if(input$usecalfile==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$Max)){
-            2250
-        }
-        
+        norm.min <- 2000
+        norm.max <- 2250
         
         cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max)
         colnames(cal.table) <- c("CalType", "NormType", "Min", "Max")
@@ -1408,7 +1347,10 @@ shinyServer(function(input, output, session) {
         
         calConditons <<- cal.mode.list
         
-    })
+        })
+    
+    
+ 
     
     
     lineHold <- reactive({
