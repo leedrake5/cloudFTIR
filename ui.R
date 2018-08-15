@@ -103,7 +103,7 @@ tags$hr(),
 actionButton("exclude_toggle", "Toggle points"),
 actionButton("exclude_reset", "Reset"),
 downloadButton('downloadPlot', "Plot"),
-checkboxInput('showlegend', "Show Legend", value=TRUE)
+checkboxInput('showlegend', "Show Legend", value=FALSE)
 ),
 tabPanel("Peak ID", dataTableOutput('peaktableid'),
     tags$hr(),
@@ -141,10 +141,12 @@ sidebarLayout(
 sidebarPanel(
 
 actionButton('resethotablewave', "Reset"),
-actionButton('linecommitwave', "Add Wavenumbers")
+actionButton('linecommitwave', "Add Wavenumbers"),
 
+tags$hr(),
 
-
+#sliderInput('fuzzydata', label="Compress Spectrum", min=0, max=20, value=5, step=1)
+uiOutput('datacompressionui')
 ),
 
 

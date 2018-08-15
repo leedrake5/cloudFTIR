@@ -27,6 +27,7 @@ library(DescTools)
 library(prospectr)
 library(pls)
 library(baseline)
+library(doParallel)
 
 
 pdf(NULL)
@@ -162,14 +163,27 @@ shinyServer(function(input, output, session) {
     
     output$datatransformationsui <- renderUI({
         
-        if(!input$usecalfile){
+        if(input$usecalfile==FALSE){
             selectInput('datatransformations', "Data Transformation", choices=c("None", "Savitzky-Golay First Derivative", "MSC", "SNV", "SNV Detrended", "Baseline Corrected", "Velocity",  "Log", "e"), selected="None")
-        } else if(input$usecalfile && !is.null(calFileContents()$Transformation)){
+        } else if(input$usecalfile==TRUE && is.null(calFileContents()$Transformation)==FALSE){
             selectInput('datatransformations', "Data Transformation", choices=c("None", "Savitzky-Golay First Derivative", "MSC", "SNV", "SNV Detrended", "Baseline Corrected", "Velocity",  "Log", "e"), selected=calFileContents()$Transformation)
-        } else if(input$usecalfile && is.null(calFileContents()$Transformation)){
+        } else if(input$usecalfile==TRUE && is.null(calFileContents()$Transformation)==TRUE){
             selectInput('datatransformations', "Data Transformation", choices=c("None", "Savitzky-Golay First Derivative", "MSC", "SNV", "SNV Detrended", "Baseline Corrected", "Velocity",  "Log", "e"), selected="None")
         } 
 
+    })
+    
+    output$datacompressionui <- renderUI({
+        
+        if(input$usecalfile==FALSE){
+            checkboxInput('fuzzydata', label="Compress Spectrum", value=FALSE)
+        } else if(input$usecalfile==TRUE && is.null(calFileContents()$Compression)==FALSE){
+            checkboxInput('fuzzydata', label="Compress Spectrum", value=calFileContents()$Compression)
+        } else if(input$usecalfile==TRUE && is.null(calFileContents()$Compression)==TRUE){
+            checkboxInput('fuzzydata', label="Compress Spectrum", value=FALSE)
+        }
+
+        
     })
     
     
@@ -199,6 +213,8 @@ shinyServer(function(input, output, session) {
         }
         
     })
+    
+
 
     
     
@@ -1063,6 +1079,15 @@ shinyServer(function(input, output, session) {
         })
         
     
+    fuzzyData <- reactive({
+        
+        if(input$fuzzydata){
+            -1
+        } else if(!input$fuzzydata){
+            0
+        }
+        
+    })
     
     
     waveInput <- reactive({
@@ -1355,11 +1380,7 @@ shinyServer(function(input, output, session) {
     
     lineHold <- reactive({
         
-        if(is.null(input$calcurveline)==TRUE){
-            ls(dataHold())[1]
-        } else{
-            input$calcurveline
-        }
+        input$calcurveline
         
     })
     
@@ -1378,9 +1399,7 @@ shinyServer(function(input, output, session) {
             calList[[lineHold()]][[1]][["StandardsUsed"]]
         } else if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==FALSE){
             calList[[lineHold()]][[1]][["StandardsUsed"]]
-        } else if(input$usecalfile==FALSE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
-            calList[[lineHold()]][[1]][["StandardsUsed"]]
-        } else if(input$usecalfile==FALSE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==FALSE){
+        } else if(input$usecalfile==FALSE && is.null(calList[[lineHold()]])==FALSE){
             calList[[lineHold()]][[1]][["StandardsUsed"]]
         } else if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==TRUE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
             rep(TRUE, dataCount())
@@ -1396,12 +1415,14 @@ shinyServer(function(input, output, session) {
     
     vals <- reactiveValues()
     
-    
-    vals$keeprows <- if(input$usecalfile==TRUE){
-        calFileStandards()
-    }else{
-        rep(TRUE, dataCount())
-    }
+    observeEvent(input$calcurveline,{
+        vals$keeprows <- if(input$usecalfile==TRUE){
+            calFileStandards()
+        }else{
+            rep(TRUE, dataCount())
+        }
+    })
+
     
     keepRowsFrame <- reactive({
         
@@ -1711,15 +1732,15 @@ shinyServer(function(input, output, session) {
         
         
         time.bic <- if(dataType()=="Spectra"){
-            extractAIC(lm(concentration.table[, input$calcurveline]~general_prep_ftir(spectra.line.table, input$calcurveline)$Amplitude, na.action=na.exclude), k=log(length(1)))[2]
+            extractAIC(lm(concentration.table[, input$calcurveline]~general_prep_ftir(spectra.line.table, input$calcurveline)$Amplitude, na.action=na.omit), k=log(length(1)))[2]
         } else if(dataType()=="Net"){
-            extractAIC(lm(concentration.table[, input$calcurveline]~general_prep_ftir_net(spectra.line.table, input$calcurveline)$Amplitude, na.action=na.exclude), k=log(length(1)))[2]
+            extractAIC(lm(concentration.table[, input$calcurveline]~general_prep_ftir_net(spectra.line.table, input$calcurveline)$Amplitude, na.action=na.omit), k=log(length(1)))[2]
         }
         
         tc.bic <- if(dataType()=="Spectra"){
-            extractAIC(lm(concentration.table[, input$calcurveline]~simple_tc_prep_ftir(data, spectra.line.table, input$calcurveline)$Amplitude, na.action=na.exclude), k=log(length(1)))[2]
+            extractAIC(lm(concentration.table[, input$calcurveline]~simple_tc_prep_ftir(data, spectra.line.table, input$calcurveline)$Amplitude, na.action=na.omit), k=log(length(1)))[2]
         } else if(dataType()=="Net"){
-            extractAIC(lm(concentration.table[, input$calcurveline]~simple_tc_prep_ftir_net(data, spectra.line.table, input$calcurveline)$Amplitude, na.action=na.exclude), k=log(length(1)))[2]
+            extractAIC(lm(concentration.table[, input$calcurveline]~simple_tc_prep_ftir_net(data, spectra.line.table, input$calcurveline)$Amplitude, na.action=na.omit), k=log(length(1)))[2]
         }
         
         comp.bic <- if(dataType()=="Spectra"){
@@ -1941,7 +1962,7 @@ shinyServer(function(input, output, session) {
         
         cal.table <- if(dataType()=="Spectra"){
             if(input$normcal==1){
-                lucas_simp_prep_ftir(spectra.line.table=spectra.line.table, element.line=input$calcurveelemenet,slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
+                lucas_simp_prep_ftir(spectra.line.table=spectra.line.table, element.line=input$calcurveline,slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             } else if(input$normcal==2){
                 lucas_tc_prep_ftir(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             } else if(input$normcal==3){
@@ -1949,7 +1970,7 @@ shinyServer(function(input, output, session) {
             }
         } else if(dataType()=="Net"){
             if(input$normcal==1){
-                lucas_simp_prep_ftir_net(spectra.line.table=spectra.line.table, element.line=input$calcurveelemenet,slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
+                lucas_simp_prep_ftir_net(spectra.line.table=spectra.line.table, element.line=input$calcurveline,slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             } else if(input$normcal==2){
                 lucas_tc_prep_ftir_net(data=data, spectra.line.table=spectra.line.table, element.line=input$calcurveline, slope.element.lines=choices, intercept.element.lines=input$intercept_vars)
             } else if(input$normcal==3){
@@ -1960,9 +1981,15 @@ shinyServer(function(input, output, session) {
         #cal.table <- cal.table[,!colnames(cal.table) %in% "Amplitude"]
         cal.table$Concentration <- concentration.table[,input$calcurveline]
         
+        library(parallel)
+        cl <- makePSOCKcluster(as.numeric(my.cores))
+        registerDoParallel(cl)
         
-        train(Concentration~., data=cal.table[,-1], method="lm", metric=metric, preProc=c("center", "scale"), trControl=control)
-        
+
+        model <- caret::train(Concentration~., data=cal.table[,-1], method="lm", metric=metric, trControl=control, allowParallel=TRUE)
+        stopCluster(cl)
+
+        model
         
     })
     
@@ -1978,15 +2005,15 @@ shinyServer(function(input, output, session) {
 rainForestImportance <- reactive({
     
     
-    as.data.frame(importance(lineModel()))
+   varImp(lineModel(), scale=FALSE)$importance
     
 })
 
 
 importanceFrame <- reactive({
     
-    importance.frame <- rainForestImportance()
-    colnames(importance.frame) <- c("NodePurity")
+    importance.frame <- as.data.frame(rainForestImportance())
+    colnames(importance.frame) <- c("Importance")
     importance.frame$Wavenumber <- as.numeric(gsub("X", "", rownames(importance.frame)))
     importance.frame
 })
@@ -1997,10 +2024,10 @@ rainForestImportancePlot <- reactive({
 
     
     ggplot(importance.frame) +
-    geom_line(aes(Wavenumber, NodePurity)) +
+    geom_line(aes(Wavenumber, Importance)) +
     theme_light() +
     scale_x_reverse(expression(paste("Wavenumber (cm"^"-1"*")")))+
-    scale_y_continuous(paste0(input$calcurveline, " Node Purity"))
+    scale_y_continuous(paste0(input$calcurveline, " Importance"))
 
     
 })
@@ -2052,7 +2079,7 @@ output$hover_info_variable <- renderUI({
     wellPanel(
     style = style,
     p(HTML(paste0("Wavenumber:", " ", round(point$Wavenumber, 0)))),
-    p(HTML(paste0("NodePurity:", " ", round(point$NodePurity, 1))))
+    p(HTML(paste0("Importance:", " ", round(point$Importance, 1))))
     )
 })
 
@@ -2214,7 +2241,7 @@ content = function(file) {
     
     
     
-    predictAmplitudeSimp <- reactive({
+    predictAmplitudeSimpPre <- reactive({
         
         concentration.table <- concentrationTable()
         data <- dataNorm()
@@ -2249,32 +2276,37 @@ content = function(file) {
         data <- dataNorm()
         spectra.line.table <- spectraLineTable()
         
-        predict.amplitude.simp <- predictAmplitudeSimp()
+        predict.amplitude.simp <- predictAmplitudeSimpPre()
+        predict.frame.simp <- predict.amplitude.simp
+        predict.frame.simp$Concentration <- concentration.table[,input$calcurveline]
         
-        predict.frame.simp <- data.frame(predict.amplitude.simp, concentration.table[,input$calcurveline])
-        predict.frame.simp <- predict.frame.simp[complete.cases(predict.frame.simp),]
-        predict.frame.simp <- predict.frame.simp[vals$keeprows,]
-        colnames(predict.frame.simp) <- c(names(predict.amplitude.simp), "Concentration")
         predict.frame.simp <- predict.frame.simp[complete.cases(predict.frame.simp$Concentration),]
         
         predict.frame.simp
         
     })
     
+    predictAmplitudeSimp <- reactive({
+        
+        data.frame(Amplitude=predictFrameSimp()[,1])
+
+        
+    })
+    
     simpleLinearModel <- reactive({
         
-        lm(Concentration~Amplitude, data=predictFrameSimp(), na.action=na.exclude)
+        lm(Concentration~Amplitude, data=predictFrameSimp()[vals$keeprows,, drop=FALSE], na.action=na.omit)
         
         
     })
     
     nonLinearModel <- reactive({
         
-        lm(Concentration~Amplitude + I(Amplitude^2), data=predictFrameSimp(), na.action=na.exclude)
+        lm(Concentration~Amplitude + I(Amplitude^2), data=predictFrameSimp()[vals$keeprows,, drop=FALSE], na.action=na.omit)
         
     })
     
-    predictAmplitudeForest <- reactive({
+    predictAmplitudeForestPre <- reactive({
         
         concentration.table <- concentrationTable()
         data <- dataNorm()
@@ -2312,14 +2344,20 @@ content = function(file) {
         spectra.line.table <- spectraLineTable()
         
         
-        predict.amplitude.forest <- predictAmplitudeForest()
+        predict.amplitude.forest <- predictAmplitudeForestPre()
         
         predict.frame.forest <- data.frame(predict.amplitude.forest, Concentration=concentration.table[,input$calcurveline])
         predict.frame.forest <- predict.frame.forest[complete.cases(predict.frame.forest),]
-        predict.frame.forest <- predict.frame.forest[vals$keeprows,]
         predict.frame.forest <- predict.frame.forest[complete.cases(predict.frame.forest$Concentration),]
         
         predict.frame.forest
+        
+    })
+    
+    predictAmplitudeForest <- reactive({
+        
+        predictFrameForest()[,!(colnames(predictFrameForest()) %in% "Concentration")]
+        
         
     })
     
@@ -2332,15 +2370,26 @@ content = function(file) {
         #    randomForest(Concentration~., data=predict.frame, na.action=na.omit, ntree=ntree, nPerm=10, norm.votes=FALSE)
             
             #}
-        randomForest(Concentration~., data=predictFrameForest(), na.action=na.omit, ntree=1000, nPerm=10)
+            #randomForest(Concentration~., data=predictFrameForest(), na.action=na.omit, ntree=200, nPerm=10)
+            
+            cl <- makePSOCKcluster(as.numeric(my.cores))
+            registerDoParallel(cl)
+            
+            rf_model<-caret::train(Concentration~.,data=predict.frame[vals$keeprows,, drop=FALSE],method="rf", type="Regression",
+            trControl=trainControl(method="cv",number=5),
+            prox=TRUE,allowParallel=TRUE, importance=TRUE, metric="RMSE")
+            
+            stopCluster(cl)
+            rf_model
+
         
     })
     
     
-    predictAmplitudeLuc <- reactive({
+    predictAmplitudeLucPre <- reactive({
         
         
-        predictAmplitudeForest()[,c("Amplitude", input$slope_vars)]
+        predictAmplitudeForestPre()[,c("Amplitude", input$slope_vars)]
         
     })
     
@@ -2351,11 +2400,10 @@ content = function(file) {
         spectra.line.table <- spectraLineTable()
         
         
-        predict.amplitude.luc <- predictAmplitudeLuc()
+        predict.amplitude.luc <- predictAmplitudeLucPre()
         
         predict.frame.luc <- data.frame(predict.amplitude.luc, concentration.table[,input$calcurveline])
         predict.frame.luc <- predict.frame.luc[complete.cases(predict.frame.luc),]
-        predict.frame.luc <- predict.frame.luc[vals$keeprows,]
         colnames(predict.frame.luc) <- c(names(predict.amplitude.luc), "Concentration")
         predict.frame.luc <- predict.frame.luc[complete.cases(predict.frame.luc$Concentration),]
         
@@ -2363,34 +2411,43 @@ content = function(file) {
         
     })
     
+    predictAmplitudeLuc <- reactive({
+        
+        predictFrameLuc()[,!(colnames(predictFrameLuc()) %in% "Concentration")]
+        
+        
+    })
+    
     
     lucasToothModel <- reactive({
         
-        lm(Concentration~., data=predictFrameLuc(), na.action=na.exclude)
+        lm(Concentration~., data=predictFrameLuc()[vals$keeprows,, drop=FALSE], na.action=na.omit)
     })
     
-    rainforestAmplitude <- reactive({
+    rainforestAmplitudePre <- reactive({
         data <- dataNorm()
         
         spectra.data <- if(input$normcal==1){
             if(dataType()=="Spectra"){
-                spectra_simp_prep_ftir(spectra=data)[,-1]
+                spectra_simp_prep_ftir(spectra=data, compression=fuzzyData())[,-1]
             } else if(dataType()=="Net"){
                 NULL
             }
         } else if(input$normcal==2){
             if(dataType()=="Spectra"){
-                spectra_tc_prep_ftir(spectra=data)[,-1]
+                spectra_tc_prep_ftir(spectra=data, compression=fuzzyData())[,-1]
             } else if(dataType()=="Net"){
                 NULL
             }
         } else if(input$normcal==3){
             if(dataType()=="Spectra"){
-                spectra_comp_prep_ftir(spectra=data, norm.min=input$comptonmin, norm.max=input$comptonmax)[,-1]
+                spectra_comp_prep_ftir(spectra=data, compression=fuzzyData(), norm.min=input$comptonmin, norm.max=input$comptonmax)[,-1]
             } else if(dataType()=="Net"){
                 NULL
             }
         }
+        
+
         spectra.data
 
         
@@ -2400,15 +2457,24 @@ content = function(file) {
     rainforestData <- reactive({
         
         concentration.table <- concentrationTable()
-        data <- dataNorm()
-        spectra.line.table <- spectraLineTable()
         
-        spectra.data <- rainforestAmplitude()
+        spectra.data <- as.data.frame(rainforestAmplitudePre())
+        #spectra.data <- spectra.data[spectra.data$Spectrum %in% concentration.table$Spectrum, ]
+
         
-        spectra.data$Concentration <- concentration.table[complete.cases(concentration.table[,input$calcurveline]),input$calcurveline]
+        spectra.data$Concentration <- concentration.table[,input$calcurveline]
+    
         spectra.data <- spectra.data[complete.cases(spectra.data$Concentration),]
-        spectra.data <- spectra.data[vals$keeprows,]
+
+
         spectra.data
+        
+    })
+    
+    
+    rainforestAmplitude <- reactive({
+        
+        rainforestData()[,!(colnames(rainforestData()) %in% "Concentration")]
         
     })
     
@@ -2436,7 +2502,18 @@ content = function(file) {
         #result <- do.call(what=randomForest::combine, args=forest.list)
         #result
 
-        randomForest(Concentration~., data=rainforestData(), na.action=na.omit, ntree=1000, nPerm=10)
+        #randomForest(Concentration~., data=rainforestData(), na.action=na.omit, ntree=200, nPerm=10)
+        cl <- makePSOCKcluster(as.numeric(my.cores))
+        registerDoParallel(cl)
+        
+        rf_model<-caret::train(Concentration~.,data=spectra.data[vals$keeprows,, drop=FALSE],method="rf", type="Regression",
+        trControl=trainControl(method="cv",number=5),
+        prox=TRUE,allowParallel=TRUE, na.action=na.omit, importance=TRUE)
+        
+        
+        stopCluster(cl)
+        rf_model
+
         
     })
     
@@ -2478,23 +2555,23 @@ content = function(file) {
         
         cal.lm.simp <- simpleLinearModel()
         lm.predict <- predict(cal.lm.simp, newdata=predict.amplitude.simp)
-        lm.sum <- summary(lm(predict.frame.simp$Concentration~lm.predict, na.action=na.exclude))
+        lm.sum <- summary(lm(predict.frame.simp$Concentration~lm.predict, na.action=na.omit))
         
         cal.lm.two <- nonLinearModel()
         lm2.predict <- predict(cal.lm.two, newdata=predict.amplitude.simp)
-        lm2.sum <- summary(lm(predict.frame.simp$Concentration~lm2.predict, na.action=na.exclude))
+        lm2.sum <- summary(lm(predict.frame.simp$Concentration~lm2.predict, na.action=na.omit))
         
         cal.lm.luc <- lucasToothModel()
         lucas.predict <- predict(cal.lm.luc, newdata=predict.amplitude.luc)
-        lucas.sum <- summary(lm(predict.frame.luc$Concentration~lucas.predict, na.action=na.exclude))
+        lucas.sum <- summary(lm(predict.frame.luc$Concentration~lucas.predict, na.action=na.omit))
         
         cal.lm.forest <- forestModel()
         forest.predict <- predict(cal.lm.forest, newdata=predict.amplitude.forest)
-        forest.sum <- summary(lm(predict.frame.forest$Concentration~forest.predict, na.action=na.exclude))
+        forest.sum <- summary(lm(predict.frame.forest$Concentration~forest.predict, na.action=na.omit))
         
         cal.lm.rainforest <- rainforestModel()
         rainforest.predict <- predict(cal.lm.rainforest, newdata=predict.amplitude.rainforest)
-        rainforest.sum <- summary(lm(predict.frame.rainforest$Concentration~rainforest.predict, na.action=na.exclude))
+        rainforest.sum <- summary(lm(predict.frame.rainforest$Concentration~rainforest.predict, na.action=na.omit))
         
         
         model.frame <- data.frame(Model = c("Linear", "Non-Linear", "Lucas-Tooth", "Forest", "Rainforest"),
@@ -2537,7 +2614,7 @@ content = function(file) {
     
     testing2 <- reactive({
         
-        rainforestData()
+        predictAmplitude()
         
     })
     
@@ -2614,33 +2691,36 @@ content = function(file) {
     
     
     predictAmplitude <- reactive({
+
+
+            if (input$radiocal==1){
+                predictAmplitudeSimp()
+            } else if(input$radiocal==2){
+                predictAmplitudeSimp()
+            } else if(input$radiocal==3){
+                predictAmplitudeLuc()
+            } else if(input$radiocal==4){
+                predictAmplitudeForest()
+            } else if(input$radiocal==5){
+                rainforestAmplitude()
+            }
         
-        if (input$radiocal==1){
-            predictAmplitudeSimp()
-        } else if (input$radiocal==2){
-            predictAmplitudeSimp()
-        } else if (input$radiocal==3){
-            predictAmplitudeLuc()
-        } else if (input$radiocal==4){
-            predictAmplitudeForest()
-        } else if (input$radiocal==5){
-            rainforestAmplitude()
-        }
-        
+
     })
     
     
     predictFrame <- reactive({
+
         
         if (input$radiocal==1){
             predictFrameSimp()
-        } else if (input$radiocal==2){
+        } else if(input$radiocal==2){
             predictFrameSimp()
-        } else if (input$radiocal==3){
+        } else if(input$radiocal==3){
             predictFrameLuc()
-        } else if (input$radiocal==4){
+        } else if(input$radiocal==4){
             predictFrameForest()
-        } else if (input$radiocal==5){
+        } else if(input$radiocal==5){
             rainforestData()
         }
         
@@ -2692,7 +2772,7 @@ content = function(file) {
         predict.amplitude <- predictAmplitude()
         predict.frame <- predictFrame()
         line.model <- lineModel()
-        
+        data=dataNorm()
         
         if (input$radiocal==1){
             cal.est.conc.pred <- predict(object=line.model, newdata=predict.amplitude, interval='confidence')
@@ -2729,7 +2809,7 @@ content = function(file) {
         if (input$radiocal==4){
             
             
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitudes)
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude)
             #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
             #cal.est.conc.luc <- cal.est.conc.tab$fit
             #cal.est.conc.luc.up <- cal.est.conc.tab$upr
@@ -2745,7 +2825,7 @@ content = function(file) {
         if (input$radiocal==5){
 
             
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude)
+            cal.est.conc.pred.luc <- predict(object=line.model, newdata=predict.amplitude)
             #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
             #cal.est.conc.luc <- cal.est.conc.tab$fit
             #cal.est.conc.luc.up <- cal.est.conc.tab$upr
@@ -2815,9 +2895,9 @@ content = function(file) {
             calcurve.plot <- ggplot(data=predict.frame[ vals$keeprows, , drop = FALSE], aes(Amplitude, Concentration)) +
             theme_light() +
             annotate("text", label=lm_eqn(lm(Concentration~Amplitude, predict.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            stat_smooth(method="lm", fullrange = TRUE) +
             geom_point() +
             geom_point(data = predict.frame[!vals$keeprows, , drop = FALSE], shape = 21, fill = "red", color = "black", alpha = 0.25) +
-            stat_smooth(method="lm", fullrange = TRUE) +
             scale_x_continuous(paste(element.name, intens)) +
             scale_y_continuous(paste(element.name, conen)) +
             coord_cartesian(xlim = rangescalcurve$x, ylim = rangescalcurve$y, expand = TRUE)
@@ -2828,9 +2908,9 @@ content = function(file) {
             calcurve.plot <- ggplot(data=predict.frame[ vals$keeprows, , drop = FALSE], aes(Amplitude, Concentration)) +
             theme_light() +
             annotate("text", label=lm_eqn_poly(lm(Concentration~Amplitude + I(Amplitude^2), predict.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            stat_smooth(method="lm", formula=y~poly(x,2)) +
             geom_point() +
             geom_point(data = predict.frame[!vals$keeprows, , drop = FALSE], shape = 21, fill = "red", color = "black", alpha = 0.25) +
-            stat_smooth(method="lm", formula=y~poly(x,2)) +
             scale_x_continuous(paste(element.name, intens)) +
             scale_y_continuous(paste(element.name, conen)) +
             coord_cartesian(xlim = rangescalcurve$x, ylim = rangescalcurve$y, expand = TRUE)
@@ -2841,9 +2921,9 @@ content = function(file) {
             calcurve.plot <- ggplot(data=val.frame[ vals$keeprows, , drop = FALSE], aes(AmplitudeNorm, Concentration)) +
             theme_light() +
             annotate("text", label=lm_eqn(lm(Concentration~., val.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            geom_smooth(aes(x=AmplitudeNorm, y=Concentration, ymin = Lower, ymax = Upper)) +
             geom_point() +
             geom_point(aes(AmplitudeNorm, Concentration), data = val.frame[!vals$keeprows, , drop = FALSE], shape = 21, fill = "red", color = "black", alpha = 0.25) +
-            geom_smooth(aes(x=AmplitudeNorm, y=Concentration, ymin = Lower, ymax = Upper)) +
             scale_x_continuous(paste(element.name, norma)) +
             scale_y_continuous(paste(element.name, conen)) +
             coord_cartesian(xlim = rangescalcurve$x, ylim = rangescalcurve$y, expand = TRUE)
@@ -2854,9 +2934,9 @@ content = function(file) {
             calcurve.plot <- ggplot(data=val.frame[ vals$keeprows, , drop = FALSE], aes(AmplitudeNorm, Concentration)) +
             theme_light() +
             annotate("text", label=lm_eqn(lm(Concentration~AmplitudeNorm, val.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            geom_smooth() +
             geom_point() +
             geom_point(aes(AmplitudeNorm, Concentration), data = val.frame[!vals$keeprows, , drop = FALSE], shape = 21, fill = "red", color = "black", alpha = 0.25) +
-            geom_smooth() +
             scale_x_continuous(paste(element.name, norma)) +
             scale_y_continuous(paste(element.name, conen)) +
             coord_cartesian(xlim = rangescalcurve$x, ylim = rangescalcurve$y, expand = TRUE)
@@ -2867,9 +2947,9 @@ content = function(file) {
             calcurve.plot <- ggplot(data=val.frame[ vals$keeprows, , drop = FALSE], aes(AmplitudeNorm, Concentration)) +
             theme_light() +
             annotate("text", label=lm_eqn(lm(Concentration~AmplitudeNorm, val.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            geom_smooth() +
             geom_point() +
             geom_point(aes(AmplitudeNorm, Concentration), data = val.frame[!vals$keeprows, , drop = FALSE], shape = 21, fill = "red", color = "black", alpha = 0.25) +
-            geom_smooth() +
             scale_x_continuous(paste(element.name, norma)) +
             scale_y_continuous(paste(element.name, conen)) +
             coord_cartesian(xlim = rangescalcurve$x, ylim = rangescalcurve$y, expand = TRUE)
@@ -3047,11 +3127,28 @@ content = function(file) {
         }
         
         if (input$radiocal==4){
-            randomForest(Concentration~., data=predict.frame, na.action=na.omit, ntree=1000, nPerm=10, norm.votes=FALSE)
-        }
+            cl <- makePSOCKcluster(as.numeric(my.cores))
+            registerDoParallel(cl)
+            
+            cal.lm <-caret::train(Concentration~.,data=predict.frame,method="rf", type="Regression",
+            trControl=trainControl(method="cv",number=5),
+            prox=TRUE,allowParallel=TRUE, na.action=na.omit, importance=TRUE)
+            
+            
+            stopCluster(cl)
+                    }
         
         if (input$radiocal==5){
-            randomForest(Concentration~., data=predict.frame, na.action=na.omit, ntree=1000, nPerm=10, norm.votes=FALSE)
+            cl <- makePSOCKcluster(as.numeric(my.cores))
+            registerDoParallel(cl)
+            
+            cal.lm <-caret::train(Concentration~.,data=predict.frame,method="rf", type="Regression",
+            trControl=trainControl(method="cv",number=5),
+            prox=TRUE,allowParallel=TRUE, na.action=na.omit, importance=TRUE)
+            
+            
+            stopCluster(cl)
+        
 
         }
         
@@ -3061,7 +3158,6 @@ content = function(file) {
     
     
     valFrameRandomized <- reactive({
-        
         predict.amplitude <- predictAmplitude()[ vals$keeprows, , drop = FALSE]
         predict.frame <- predictFrame()[ vals$keeprows, , drop = FALSE]
         
@@ -3090,19 +3186,7 @@ content = function(file) {
         }
         
         if (input$radiocal==3){
-            
-            xmin = 0; xmax=10
-            N = length(predict.frame$Concentration)
-            means = colMeans(predict.frame)
-            dummyDF = t(as.data.frame(means))
-            for(i in 2:N){dummyDF=rbind(dummyDF,means)}
-            xv=seq(xmin,xmax, length.out=N)
-            dummyDF$Concentration = xv
-            yv=predict(line.model, newdata=predict.amplitude)
-            
-            
-            lucas.x <- yv
-            
+     
             cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
             cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
             cal.est.conc.luc <- cal.est.conc.tab$fit
@@ -3110,58 +3194,37 @@ content = function(file) {
             cal.est.conc.luc.low <- cal.est.conc.tab$lwr
             
             
-            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, lucas.x, cal.est.conc.luc, cal.est.conc.luc.up, cal.est.conc.luc.low)
+            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, cal.est.conc.luc, cal.est.conc.luc, cal.est.conc.luc.up, cal.est.conc.luc.low)
             colnames(val.frame) <- c("Concentration", "Amplitude", "AmplitudeNorm", "Prediction", "Upper", "Lower")
         }
         
         if (input$radiocal==4){
             
-            xmin = 0; xmax=10
-            N = length(predict.frame$Concentration)
-            means = colMeans(predict.frame)
-            dummyDF = t(as.data.frame(means))
-            for(i in 2:N){dummyDF=rbind(dummyDF,means)}
-            xv=seq(xmin,xmax, length.out=N)
-            dummyDF$Concentration = xv
-            yv=predict(line.model, newdata=predict.amplitude)
             
-            
-            lucas.x <- yv
-            
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
+            cal.est.conc.pred.luc <- predict(object=line.model, newdata=predict.amplitude)
             #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
             #cal.est.conc.luc <- cal.est.conc.tab$fit
             #cal.est.conc.luc.up <- cal.est.conc.tab$upr
             #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
             
             
-            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, lucas.x, as.vector(cal.est.conc.pred.luc))
+            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
             colnames(val.frame) <- c("Concentration", "Amplitude", "AmplitudeNorm", "Prediction")
         }
         
         
         if (input$radiocal==5){
             
-            xmin = 0; xmax=10
-            N = length(predict.frame$Concentration)
-            means = colMeans(predict.amplitude)
-            dummyDF = t(as.data.frame(means))
-            for(i in 2:N){dummyDF=rbind(dummyDF,means)}
-            xv=seq(xmin,xmax, length.out=N)
-            dummyDF$Concentration = xv
-            yv=predict(line.model, newdata=predict.amplitude)
-
+    
             
-            lucas.x <- yv
-            
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
+            cal.est.conc.pred.luc <- predict(object=line.model, newdata=predict.amplitude, na.action=na.omit)
             #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
             #cal.est.conc.luc <- cal.est.conc.tab$fit
             #cal.est.conc.luc.up <- cal.est.conc.tab$upr
             #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
             
             
-            val.frame <- data.frame(predict.frame$Concentration, lucas.x, as.vector(cal.est.conc.pred.luc))
+            val.frame <- data.frame(na.omit(predict.frame$Concentration), as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
             colnames(val.frame) <- c("Concentration", "AmplitudeNorm", "Prediction")
         }
         
@@ -3218,7 +3281,7 @@ content = function(file) {
         if (input$radiocal==4){
             
 
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude)
             
             
             
@@ -3229,11 +3292,11 @@ content = function(file) {
         if (input$radiocal==5){
             
 
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude, interval='confidence')
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude)
             
             
             
-            val.frame <- data.frame(predict.frame$Concentration, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            val.frame <- data.frame(na.omit(predict.frame$Concentration), as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
             colnames(val.frame) <- c("Concentration", "AmplitudeNorm", "Prediction")
         }
         
@@ -3270,9 +3333,9 @@ content = function(file) {
             calcurve.plot <- ggplot(data=predict.frame, aes(Amplitude, Concentration)) +
             theme_light() +
             annotate("text", label=lm_eqn(line.model), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            stat_smooth(method="lm", fullrange = TRUE) +
             geom_point() +
             geom_point(data = predict.frame, shape = 21, fill = "red", color = "black", alpha = 0.25) +
-            stat_smooth(method="lm", fullrange = TRUE) +
             scale_x_continuous(paste(element.name, intens)) +
             scale_y_continuous(paste(element.name, conen)) +
             coord_cartesian(xlim = rangescalcurverandom$x, ylim = rangescalcurverandom$y, expand = TRUE)
@@ -3284,9 +3347,9 @@ content = function(file) {
             calcurve.plot <- ggplot(data=predict.frame, aes(Amplitude, Concentration)) +
             theme_light() +
             annotate("text", label=lm_eqn_poly(line.model), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            stat_smooth(method="lm", formula=y~poly(x,2)) +
             geom_point() +
             geom_point(data = predict.frame, shape = 21, fill = "red", color = "black", alpha = 0.25) +
-            stat_smooth(method="lm", formula=y~poly(x,2)) +
             scale_x_continuous(paste(element.name, intens)) +
             scale_y_continuous(paste(element.name, conen)) +
             coord_cartesian(xlim = rangescalcurverandom$x, ylim = rangescalcurverandom$y, expand = TRUE)
@@ -3298,9 +3361,9 @@ content = function(file) {
             calcurve.plot <- ggplot(data=val.frame, aes(AmplitudeNorm, Concentration)) +
             theme_light() +
             annotate("text", label=lm_eqn(line.model), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            geom_smooth(aes(x=AmplitudeNorm, y=Concentration, ymin = Lower, ymax = Upper)) +
             geom_point() +
             geom_point(aes(AmplitudeNorm, Concentration), data = val.frame, shape = 21, fill = "red", color = "black", alpha = 0.25) +
-            geom_smooth(aes(x=AmplitudeNorm, y=Concentration, ymin = Lower, ymax = Upper)) +
             scale_x_continuous(paste(element.name, norma)) +
             scale_y_continuous(paste(element.name, conen)) +
             coord_cartesian(xlim = rangescalcurverandom$x, ylim = rangescalcurverandom$y, expand = TRUE)
@@ -3312,9 +3375,9 @@ content = function(file) {
             calcurve.plot <- ggplot(data=val.frame, aes(AmplitudeNorm, Concentration)) +
             theme_light() +
             annotate("text", label=lm_eqn(lm(Concentration~AmplitudeNorm, val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            geom_smooth() +
             geom_point() +
             geom_point(aes(AmplitudeNorm, Concentration), data = val.frame, shape = 21, fill = "red", color = "black", alpha = 0.25) +
-            geom_smooth() +
             scale_x_continuous(paste(element.name, norma)) +
             scale_y_continuous(paste(element.name, conen)) +
             coord_cartesian(xlim = rangescalcurverandom$x, ylim = rangescalcurverandom$y, expand = TRUE)
@@ -3326,9 +3389,9 @@ content = function(file) {
             calcurve.plot <- ggplot(data=val.frame, aes(AmplitudeNorm, Concentration)) +
             theme_light() +
             annotate("text", label=lm_eqn(lm(Concentration~AmplitudeNorm, val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            geom_smooth() +
             geom_point() +
             geom_point(aes(AmplitudeNorm, Concentration), data = val.frame, shape = 21, fill = "red", color = "black", alpha = 0.25) +
-            geom_smooth() +
             scale_x_continuous(paste(element.name, norma)) +
             scale_y_continuous(paste(element.name, conen)) +
             coord_cartesian(xlim = rangescalcurverandom$x, ylim = rangescalcurverandom$y, expand = TRUE)
@@ -3430,13 +3493,13 @@ content = function(file) {
     # Float over info
     output$hover_infocal <- renderUI({
         
-        point.table <- if(calType()==3){
+        point.table <- if(calType()==1){
             calCurveFrame()
         } else if(calType()==2){
             calCurveFrame()
-        } else if(calType()==3) {
+        } else if(calType()==3){
             calValFrame()
-        } else if(calType()==5) {
+        } else if(calType()==5){
             calValFrame()
         }
         
@@ -4430,8 +4493,8 @@ content = function(file) {
         
         
         calibrationList <- NULL
-        calibrationList <- list(input$filetype, input$datatransformations, input$calunits, cal.data, cal.intensities, cal.values, cal.defs, calList)
-        names(calibrationList) <- c("FileType", "Transformation", "Units", "Spectra", "Intensities", "Values", "Definitions", "calList")
+        calibrationList <- list(input$filetype, input$datatransformations, input$fuzzydata, input$calunits, cal.data, cal.intensities, cal.values, cal.defs, calList)
+        names(calibrationList) <- c("FileType", "Transformation", "Compression", "Units", "Spectra", "Intensities", "Values", "Definitions", "calList")
         
         Calibration <<- calibrationList
         

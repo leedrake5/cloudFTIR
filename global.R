@@ -923,9 +923,9 @@ spectra_table_ftir <- function(spectra, concentration){
 
 
 
-spectra_simp_prep_ftir <- function(spectra){
+spectra_simp_prep_ftir <- function(spectra, compression){
     
-    spectra$Wavenumber <- round(spectra$Wavenumber, 0)
+    spectra$Wavenumber <- round(spectra$Wavenumber, compression)
     spectra <- data.table(spectra)
     spectra.aggregate <- spectra[, list(Amplitude=mean(Amplitude, na.rm = TRUE)), by = list(Spectrum,Wavenumber)]
     
@@ -937,9 +937,9 @@ spectra_simp_prep_ftir <- function(spectra){
     
 }
 
-spectra_tc_prep_ftir <- function(spectra){
+spectra_tc_prep_ftir <- function(spectra, compression){
     
-    spectra$Wavenumber <- round(spectra$Wavenumber, 0)
+    spectra$Wavenumber <- round(spectra$Wavenumber, compression)
     
     spectra <- data.table(spectra)
     spectra.aggregate <- spectra[, list(Amplitude=mean(Amplitude, na.rm = TRUE)), by = list(Spectrum,Wavenumber)]
@@ -959,7 +959,7 @@ spectra_tc_prep_ftir <- function(spectra){
     
 }
 
-spectra_comp_prep_ftir <- function(spectra, norm.min, norm.max){
+spectra_comp_prep_ftir <- function(spectra, compression, norm.min, norm.max){
     
     compton.norm <- subset(spectra$Amplitude, !(spectra$Wavenumber < norm.min | spectra$Wavenumber > norm.max))
     compton.file <- subset(spectra$Spectrum, !(spectra$Wavenumber < norm.min | spectra$Wavenumber > norm.max))
@@ -968,7 +968,7 @@ spectra_comp_prep_ftir <- function(spectra, norm.min, norm.max){
     compton.frame.ag <- aggregate(list(compton.frame$Compton), by=list(compton.frame$Spectrum), FUN="sum")
     colnames(compton.frame.ag) <- c("Spectrum", "Compton")
     
-    spectra$Wavenumber <- round(spectra$Wavenumber, 0)
+    spectra$Wavenumber <- round(spectra$Wavenumber, compression)
     
     spectra <- data.table(spectra)
     spectra.aggregate <- spectra[, list(Amplitude=mean(Amplitude, na.rm = TRUE)), by = list(Spectrum,Wavenumber)]
