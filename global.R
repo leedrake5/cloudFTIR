@@ -1,6 +1,6 @@
-#list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "broom", "shinyjs", "gridExtra", "dtplyr", "formattable", "XML", "corrplot", "scales", "rmarkdown", "markdown", "peakPick", "shinyWidgets", "soil.spec", "data.table", "baseline", "pls", "prospectr")
-#new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-#if(length(new.packages)) install.packages(new.packages)
+list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "broom", "shinyjs", "gridExtra", "dtplyr", "formattable", "XML", "corrplot", "scales", "rmarkdown", "markdown", "peakPick", "shinyWidgets", "soil.spec", "data.table", "baseline", "pls", "prospectr", "doSNOW", "parallel", "caret")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
 
 options(warn=-1)
 assign("last.warning", NULL, envir = baseenv())
@@ -16,8 +16,6 @@ library(soil.spec)
 library(parallel)
 library(caret)
 library(data.table)
-library(doMC)
-registerDoMC()
 library(doSNOW)
 
 Sys.setenv(R_MAX_VSIZE = 16e9)
