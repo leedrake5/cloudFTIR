@@ -2372,11 +2372,15 @@ content = function(file) {
             #}
             #randomForest(Concentration~., data=predictFrameForest(), na.action=na.omit, ntree=200, nPerm=10)
             
-            cl <- makePSOCKcluster(as.numeric(my.cores))
+            cl <- if(get_os()=="windows"){
+                makePSOCKcluster(as.numeric(my.cores))
+            } else if(get_os()!="windows"){
+                makeForkCluster(as.numeric(my.cores))
+            }
             registerDoParallel(cl)
             
             rf_model<-caret::train(Concentration~.,data=predict.frame[vals$keeprows,, drop=FALSE],method="rf", type="Regression",
-            trControl=trainControl(method="cv",number=5),
+            trControl=trainControl(method=input$foresttrain,number=input$forestnumber), ntree=input$foresttrees, metric=input$forestmetric,
             prox=TRUE,allowParallel=TRUE, importance=TRUE, metric="RMSE")
             
             stopCluster(cl)
@@ -2503,11 +2507,16 @@ content = function(file) {
         #result
 
         #randomForest(Concentration~., data=rainforestData(), na.action=na.omit, ntree=200, nPerm=10)
-        cl <- makePSOCKcluster(as.numeric(my.cores))
+
+        cl <- if(get_os()=="windows"){
+            makePSOCKcluster(as.numeric(my.cores))
+        } else if(get_os()!="windows"){
+            makeForkCluster(as.numeric(my.cores))
+        }
         registerDoParallel(cl)
         
         rf_model<-caret::train(Concentration~.,data=spectra.data[vals$keeprows,, drop=FALSE],method="rf", type="Regression",
-        trControl=trainControl(method="cv",number=5),
+        trControl=trainControl(method=input$foresttrain,number=input$forestnumber), ntree=input$foresttrees, metric=input$forestmetric,
         prox=TRUE,allowParallel=TRUE, na.action=na.omit, importance=TRUE)
         
         
@@ -2603,6 +2612,203 @@ content = function(file) {
     output$models <- renderDataTable({
         
         bestCalTypeFrame()
+        
+    })
+    
+    
+    
+    
+    ###Machine Learning Parameters
+    
+    calForestMetricSelectionpre <- reactive({
+        
+        
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveelement]])==TRUE){
+            calConditons[["CalTable"]][["ForestMetric"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==TRUE && is.null(calFileContents()$calList[[input$calcurveelement]])==FALSE){
+            calFileContents()$calList[[input$calcurveelement]][[1]]$CalTable$ForestMetric
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveelement]])==FALSE){
+            calList[[input$calcurveelement]][[1]]$CalTable$ForestMetric
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==FALSE){
+            calList[[input$calcurveelement]][[1]]$CalTable$ForestMetric
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==TRUE && is.null(calFileContents()$calList[[input$calcurveelement]])==TRUE){
+            calConditons[["CalTable"]][["ForestMetric"]]
+        }
+        
+    })
+    
+    calForestTCSelectionpre <- reactive({
+        
+        
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveelement]])==TRUE){
+            calConditons[["CalTable"]][["ForestTC"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==TRUE && is.null(calFileContents()$calList[[input$calcurveelement]])==FALSE){
+            calFileContents()$calList[[input$calcurveelement]][[1]]$CalTable$ForestTC
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveelement]])==FALSE){
+            calList[[input$calcurveelement]][[1]]$CalTable$ForestTC
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==FALSE){
+            calList[[input$calcurveelement]][[1]]$CalTable$ForestTC
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==TRUE && is.null(calFileContents()$calList[[input$calcurveelement]])==TRUE){
+            calConditons[["CalTable"]][["ForestTC"]]
+        }
+        
+    })
+    
+    
+    calForestNumberSelectionpre <- reactive({
+        
+        
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveelement]])==TRUE){
+            calConditons[["CalTable"]][["ForestNumber"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==TRUE && is.null(calFileContents()$calList[[input$calcurveelement]])==FALSE){
+            calFileContents()$calList[[input$calcurveelement]][[1]]$CalTable$ForestNumber
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveelement]])==FALSE){
+            calList[[input$calcurveelement]][[1]]$CalTable$ForestNumber
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==FALSE){
+            calList[[input$calcurveelement]][[1]]$CalTable$ForestNumber
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==TRUE && is.null(calFileContents()$calList[[input$calcurveelement]])==TRUE){
+            calConditons[["CalTable"]][["ForestNumber"]]
+        }
+        
+    })
+    
+    
+    calForestTreeSelectionpre <- reactive({
+        
+        
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveelement]])==TRUE){
+            calConditons[["CalTable"]][["ForestTrees"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==TRUE && is.null(calFileContents()$calList[[input$calcurveelement]])==FALSE){
+            calFileContents()$calList[[input$calcurveelement]][[1]]$CalTable$ForestTrees
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveelement]])==FALSE){
+            calList[[input$calcurveelement]][[1]]$CalTable$ForestTrees
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==FALSE){
+            calList[[input$calcurveelement]][[1]]$CalTable$ForestTrees
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==TRUE && is.null(calFileContents()$calList[[input$calcurveelement]])==TRUE){
+            calConditons[["CalTable"]][["ForestTrees"]]
+        }
+        
+    })
+    
+    
+    foresthold <- reactiveValues()
+    
+    observeEvent(input$calcurveelement, {
+        foresthold$metric <- calForestMetricSelectionpre()
+        foresthold$train <- calForestTCSelectionpre()
+        foresthold$number <- calForestNumberSelectionpre()
+        foresthold$trees <- calForestTreeSelectionpre()
+    })
+    
+    
+    #observeEvent(input$trainslopes, {
+    
+    #    isolate(calhold$caltype <- bestCalType())
+    
+    #})
+    
+    
+    
+    forestMetricSelection <- reactive({
+        foresthold$metric
+    })
+    
+    forestTrainSelection <- reactive({
+        foresthold$train
+    })
+    
+    forestNumberSelection <- reactive({
+        foresthold$number
+    })
+    
+    forestTreeSelection <- reactive({
+        foresthold$trees
+    })
+    
+    
+    
+    
+    output$forestmetricui <- renderUI({
+        
+        if(input$radiocal==1){
+            NULL
+        } else if(input$radiocal==2){
+            NULL
+        } else if(input$radiocal==3){
+            NULL
+        } else if(input$radiocal==4){
+            selectInput("forestmetric", label="Metric", choices=c("Root Mean Square Error"="RMSE", "R2"="Rsquared", "ROC Curve"="ROC", "Logarithmic Loss"="logLoss"), selected=forestMetricSelection())
+        } else if(input$radiocal==5){
+            selectInput("forestmetric", label="Metric", choices=c("Root Mean Square Error"="RMSE", "R2"="Rsquared", "ROC Curve"="ROC", "Logarithmic Loss"="logLoss"), selected=forestMetricSelection())
+        }
+        
+    })
+    
+    
+    output$foresttrainui <- renderUI({
+        
+        if(input$radiocal==1){
+            NULL
+        } else if(input$radiocal==2){
+            NULL
+        } else if(input$radiocal==3){
+            NULL
+        } else if(input$radiocal==4){
+            selectInput("foresttrain", label="Train Control", choices=c("k-fold Cross Validation"="cv", "Bootstrap"="boot", "0.632 Bootstrap"="boot632", "Optimism Bootstrap"="optimism_boot", "Repeated k-fold Cross Validation"="repeatedcv", "Leave One Out Cross Validation"="LOOCV", "Out of Bag Estimation"="oob"), selected=forestTrainSelection())
+        }  else if(input$radiocal==5){
+            selectInput("foresttrain", label="Train Control", choices=c("k-fold Cross Validation"="cv", "Bootstrap"="boot", "0.632 Bootstrap"="boot632", "Optimism Bootstrap"="optimism_boot", "Repeated k-fold Cross Validation"="repeatedcv", "Leave One Out Cross Validation"="LOOCV", "Out of Bag Estimation"="oob"), selected=forestTrainSelection())
+        }
+        
+    })
+    
+    output$forestnumberui <- renderUI({
+        
+        if(input$radiocal==1){
+            NULL
+        } else if(input$radiocal==2){
+            NULL
+        } else if(input$radiocal==3){
+            NULL
+        } else if(input$radiocal==4){
+            sliderInput("forestnumber", label="Iterations", min=5, max=500, value=forestNumberSelection())
+        }  else if(input$radiocal==5){
+            sliderInput("forestnumber", label="Iterations", min=5, max=500, value=forestNumberSelection())
+        }
+        
+    })
+    
+    
+    output$foresttreesui <- renderUI({
+        
+        if(input$radiocal==1){
+            NULL
+        } else if(input$radiocal==2){
+            NULL
+        } else if(input$radiocal==3){
+            NULL
+        } else if(input$radiocal==4){
+            sliderInput("foresttrees", label="Trees", min=50, max=2000, value=forestTreeSelection())
+        }  else if(input$radiocal==5){
+            sliderInput("foresttrees", label="Trees", min=50, max=2000, value=forestTreeSelection())
+        }
+        
+    })
+    
+    
+    
+    
+    predictFramePre <- reactive({
+        
+        intensity <- holdFrame()$Intensity
+        
+        concentration <- holdFrame()$Concentration
+        
+        predict.frame <- data.frame(concentration, intensity)
+        colnames(predict.frame) <- c("Concentration", "Intensity")
+        
+        
+        predict.frame[complete.cases(predict.frame),]
+        
         
     })
     
