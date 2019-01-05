@@ -16,7 +16,6 @@ library(soil.spec)
 library(parallel)
 library(caret)
 library(data.table)
-library(doSNOW)
 
 Sys.setenv(R_MAX_VSIZE = 16e9)
 

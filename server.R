@@ -2381,7 +2381,7 @@ content = function(file) {
             
             rf_model<-caret::train(Concentration~.,data=predict.frame[vals$keeprows,, drop=FALSE],method="rf", type="Regression",
             trControl=trainControl(method=input$foresttrain,number=input$forestnumber), ntree=input$foresttrees, metric=input$forestmetric,
-            prox=TRUE,allowParallel=TRUE, importance=TRUE, metric="RMSE")
+            prox=TRUE,allowParallel=TRUE, importance=TRUE)
             
             stopCluster(cl)
             rf_model
@@ -3333,11 +3333,15 @@ content = function(file) {
         }
         
         if (input$radiocal==4){
-            cl <- makePSOCKcluster(as.numeric(my.cores))
+            cl <- if(get_os()=="windows"){
+                makePSOCKcluster(as.numeric(my.cores))
+            } else if(get_os()!="windows"){
+                makeForkCluster(as.numeric(my.cores))
+            }
             registerDoParallel(cl)
             
             cal.lm <-caret::train(Concentration~.,data=predict.frame,method="rf", type="Regression",
-            trControl=trainControl(method="cv",number=5),
+            trControl=trainControl(method=input$foresttrain,number=input$forestnumber), ntree=input$foresttrees, metric=input$forestmetric,
             prox=TRUE,allowParallel=TRUE, na.action=na.omit, importance=TRUE)
             
             
@@ -3345,11 +3349,15 @@ content = function(file) {
                     }
         
         if (input$radiocal==5){
-            cl <- makePSOCKcluster(as.numeric(my.cores))
+            cl <- if(get_os()=="windows"){
+                makePSOCKcluster(as.numeric(my.cores))
+            } else if(get_os()!="windows"){
+                makeForkCluster(as.numeric(my.cores))
+            }
             registerDoParallel(cl)
             
             cal.lm <-caret::train(Concentration~.,data=predict.frame,method="rf", type="Regression",
-            trControl=trainControl(method="cv",number=5),
+            trControl=trainControl(method=input$foresttrain,number=input$forestnumber), ntree=input$foresttrees, metric=input$forestmetric,
             prox=TRUE,allowParallel=TRUE, na.action=na.omit, importance=TRUE)
             
             
