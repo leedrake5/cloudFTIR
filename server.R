@@ -1344,84 +1344,7 @@ shinyServer(function(input, output, session) {
     })
     
     
-    #####Set Defaults
-    
-    
-    calConditons <- reactiveValues()
-    calList <- reactiveValues()
-    calList <- NULL
-    
-    observeEvent(input$linecommitwave, {
-        
-        cal.condition <- 3
-        norm.condition <- 1
-        
-        norm.min <- 2000
-        norm.max <- 2250
-        
-        cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max)
-        colnames(cal.table) <- c("CalType", "NormType", "Min", "Max")
-        
-        slope.corrections <- NULL
-        intercept.corrections <- NULL
-        
-        standards.used <- vals$keeprows
-        
-        cal.mode.list <- list(cal.table, slope.corrections, intercept.corrections, standards.used)
-        names(cal.mode.list) <- c("CalTable", "Slope", "Intercept", "StandardsUsed")
-        
-        calConditons <<- cal.mode.list
-        
-        })
-    
-    
- 
-    
-    
-    lineHold <- reactive({
-        
-        input$calcurveline
-        
-    })
-    
-    
-    
-    
-    calFileStandards <- reactive({
-        
-        
-        
-        if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==TRUE && is.null(calFileContents()$calList[[lineHold()]])==FALSE){
-            calFileContents()$calList[[lineHold()]][[1]][["StandardsUsed"]]
-        } else if(input$usecalfile==FALSE && is.null(calList[[lineHold()]])==TRUE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
-            rep(TRUE, dataCount())
-        } else if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
-            calList[[lineHold()]][[1]][["StandardsUsed"]]
-        } else if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==FALSE){
-            calList[[lineHold()]][[1]][["StandardsUsed"]]
-        } else if(input$usecalfile==FALSE && is.null(calList[[lineHold()]])==FALSE){
-            calList[[lineHold()]][[1]][["StandardsUsed"]]
-        } else if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==TRUE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
-            rep(TRUE, dataCount())
-        }
-        
-        
-        
-        
-    })
-    
-    
-    
-    
-    vals <- reactiveValues()
-    
-    observeEvent(input$calcurveline,{
-        vals$keeprows <- if(input$usecalfile==TRUE){
-            calFileStandards()
-        }else{
-            rep(TRUE, dataCount())
-        }
-    })
+  
 
     
     keepRowsFrame <- reactive({
@@ -1539,14 +1462,111 @@ shinyServer(function(input, output, session) {
     
     dataNorm <- reactive({
         
-        data <- dataHold()
-        data[data$Spectrum %in% holdFrame()$Spectrum, ]
+        data <- dataManipulate()
+        #data[data$Spectrum %in% holdFrame()$Spectrum, ]
         
         
     })
     
     
     
+    
+    #####Set Defaults
+    
+    lineHold <- reactive({
+        
+        if(is.null(input$calcurveline)==TRUE){
+            ls(dataHold())[1]
+        } else if(!is.null(input$calcurveline)==TRUE){
+            input$calcurveline
+        }
+        
+    })
+    
+    
+    calConditons <- reactiveValues()
+    calList <- reactiveValues()
+    calList <- if(input$usecalfile==FALSE){
+        NULL
+    } else if(input$usecalfile==TRUE){
+        calFileContents()[["calList"]]
+    }
+    
+    observeEvent(input$linecommitwave, {
+        
+        cal.condition <- 3
+        norm.condition <- 1
+        
+        norm.min <- 2000
+        norm.max <- 2250
+        
+        
+        forestmetric <- as.character("RMSE")
+        foresttrain <- as.character("cv")
+        forestnumber <- as.numeric(10)
+        foresttrees <- as.numeric(100)
+        
+        cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max, forestmetric, foresttrain, forestnumber, foresttrees)
+        colnames(cal.table) <- c("CalType", "NormType", "Min", "Max", "ForestMetric", "ForestTC", "ForestNumber", "ForestTrees")
+        
+        slope.corrections <- NULL
+        intercept.corrections <- NULL
+        
+        standards.used <- if(exists("vals")){
+            vals$keeprows
+        } else if(!exists("vals")){
+            rep(TRUE, dataCount())
+        }
+        
+        cal.mode.list <- list(cal.table, slope.corrections, intercept.corrections, standards.used)
+        names(cal.mode.list) <- c("CalTable", "Slope", "Intercept", "StandardsUsed")
+        
+        calConditons <<- cal.mode.list
+        
+    })
+    
+    
+    
+    
+    
+ 
+    
+    
+    
+    calFileStandards <- reactive({
+        
+        
+        
+        if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==TRUE && is.null(calFileContents()$calList[[lineHold()]])==FALSE){
+            calFileContents()$calList[[lineHold()]][[1]][["StandardsUsed"]]
+        } else if(input$usecalfile==FALSE && is.null(calList[[lineHold()]])==TRUE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
+            rep(TRUE, dataCount())
+        } else if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
+            calList[[lineHold()]][[1]][["StandardsUsed"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==FALSE){
+            calList[[lineHold()]][[1]][["StandardsUsed"]]
+        } else if(input$usecalfile==FALSE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
+            calList[[lineHold()]][[1]][["StandardsUsed"]]
+        } else if(input$usecalfile==FALSE && is.null(calList[[lineHold()]])==FALSE && is.null(calFileContents()$calList[[lineHold()]])==FALSE){
+            calList[[lineHold()]][[1]][["StandardsUsed"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[lineHold()]])==TRUE && is.null(calFileContents()$calList[[lineHold()]])==TRUE){
+            rep(TRUE, dataCount())
+        }
+        
+        
+        
+    })
+    
+    
+    
+    
+    vals <- reactiveValues()
+    
+        vals$keeprows <- if(input$usecalfile==TRUE){
+            calFileStandards()
+        }else{
+            rep(TRUE, dataCount())
+        }
     
     
     outVar <- reactive({
@@ -1638,11 +1658,7 @@ shinyServer(function(input, output, session) {
     })
     
     
-    dataNorm <- reactive({
-        
-        dataManipulate()
-        
-    })
+
     
     
   
@@ -1794,17 +1810,9 @@ shinyServer(function(input, output, session) {
     
     calNormSelectionpre <- reactive({
         
-        hold <- values[["DF"]]
-        
-        optionhold <- if(is.null(input$calcurveline)){
-            ls(hold)[2]
-        }else{
-            input$calcurveline
-        }
-        
         if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["NormType"]]
-        }else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==FALSE){
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==FALSE){
             calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$NormType
         } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==FALSE){
             calList[[input$calcurveline]][[1]]$CalTable$NormType
@@ -2217,14 +2225,6 @@ content = function(file) {
     
     calTypeSelectionPre <- reactive({
         
-        hold <- values[["DF"]]
-        
-        optionhold <- if(is.null(input$calcurveline)){
-            ls(hold)[2]
-        }else{
-            input$calcurveline
-        }
-        
         if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["CalType"]]
         } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==FALSE){
@@ -2233,7 +2233,7 @@ content = function(file) {
             calList[[input$calcurveline]][[1]]$CalTable$CalType
         } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE){
             calList[[input$calcurveline]][[1]]$CalTable$CalType
-        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[optionhold]])==TRUE){
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["CalType"]]
         }
         
@@ -2484,8 +2484,8 @@ content = function(file) {
     
     
     rainforestModel <- reactive({
-        spectra.data <- rainforestData()
-        index <- rep(1000/as.numeric(my.cores), as.numeric(my.cores))
+        #spectra.data <- rainforestData()
+        #index <- rep(1000/as.numeric(my.cores), as.numeric(my.cores))
         
         #do.call(combine, pblapply(rep(1000/as.numeric(my.cores), as.numeric(my.cores)), function(x) randomForest(Concentration~., data=spectra.data, na.action=na.omit, ntree=x, nPerm=10, norm.votes=FALSE), cl=my.cores))
 
@@ -2515,7 +2515,7 @@ content = function(file) {
         }
         registerDoParallel(cl)
         
-        rf_model<-caret::train(Concentration~.,data=spectra.data[vals$keeprows,, drop=FALSE],method="rf", type="Regression",
+        rf_model<-caret::train(Concentration~.,data=rainforestData()[vals$keeprows,, drop=FALSE],method="rf", type="Regression",
         trControl=trainControl(method=input$foresttrain,number=input$forestnumber), ntree=input$foresttrees, metric=input$forestmetric,
         prox=TRUE,allowParallel=TRUE, na.action=na.omit, importance=TRUE)
         
@@ -2537,9 +2537,9 @@ content = function(file) {
         spectra.line.table <- spectraLineTable()
         
         
-        #concentration.table <- concentration.table[complete.cases(concentration.table[, input$calcurveelement]),]
+        #concentration.table <- concentration.table[complete.cases(concentration.table[, input$calcurveline]),]
         
-        #spectra.line.table <- spectra.line.table[complete.cases(concentration.table[, input$calcurveelement]),]
+        #spectra.line.table <- spectra.line.table[complete.cases(concentration.table[, input$calcurveline]),]
         #data2 <- data[data$Spectrum %in% concentration.table$Spectrum, ]
         
         predict.amplitude.simp <- predictAmplitudeSimp()
@@ -2623,15 +2623,15 @@ content = function(file) {
     calForestMetricSelectionpre <- reactive({
         
         
-        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveelement]])==TRUE){
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["ForestMetric"]]
-        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==TRUE && is.null(calFileContents()$calList[[input$calcurveelement]])==FALSE){
-            calFileContents()$calList[[input$calcurveelement]][[1]]$CalTable$ForestMetric
-        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveelement]])==FALSE){
-            calList[[input$calcurveelement]][[1]]$CalTable$ForestMetric
-        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==FALSE){
-            calList[[input$calcurveelement]][[1]]$CalTable$ForestMetric
-        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==TRUE && is.null(calFileContents()$calList[[input$calcurveelement]])==TRUE){
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==FALSE){
+            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$ForestMetric
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$ForestMetric
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$ForestMetric
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["ForestMetric"]]
         }
         
@@ -2640,15 +2640,15 @@ content = function(file) {
     calForestTCSelectionpre <- reactive({
         
         
-        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveelement]])==TRUE){
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["ForestTC"]]
-        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==TRUE && is.null(calFileContents()$calList[[input$calcurveelement]])==FALSE){
-            calFileContents()$calList[[input$calcurveelement]][[1]]$CalTable$ForestTC
-        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveelement]])==FALSE){
-            calList[[input$calcurveelement]][[1]]$CalTable$ForestTC
-        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==FALSE){
-            calList[[input$calcurveelement]][[1]]$CalTable$ForestTC
-        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==TRUE && is.null(calFileContents()$calList[[input$calcurveelement]])==TRUE){
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==FALSE){
+            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$ForestTC
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$ForestTC
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$ForestTC
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["ForestTC"]]
         }
         
@@ -2658,15 +2658,15 @@ content = function(file) {
     calForestNumberSelectionpre <- reactive({
         
         
-        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveelement]])==TRUE){
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["ForestNumber"]]
-        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==TRUE && is.null(calFileContents()$calList[[input$calcurveelement]])==FALSE){
-            calFileContents()$calList[[input$calcurveelement]][[1]]$CalTable$ForestNumber
-        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveelement]])==FALSE){
-            calList[[input$calcurveelement]][[1]]$CalTable$ForestNumber
-        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==FALSE){
-            calList[[input$calcurveelement]][[1]]$CalTable$ForestNumber
-        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==TRUE && is.null(calFileContents()$calList[[input$calcurveelement]])==TRUE){
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==FALSE){
+            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$ForestNumber
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$ForestNumber
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$ForestNumber
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["ForestNumber"]]
         }
         
@@ -2676,15 +2676,15 @@ content = function(file) {
     calForestTreeSelectionpre <- reactive({
         
         
-        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveelement]])==TRUE){
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["ForestTrees"]]
-        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==TRUE && is.null(calFileContents()$calList[[input$calcurveelement]])==FALSE){
-            calFileContents()$calList[[input$calcurveelement]][[1]]$CalTable$ForestTrees
-        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveelement]])==FALSE){
-            calList[[input$calcurveelement]][[1]]$CalTable$ForestTrees
-        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==FALSE){
-            calList[[input$calcurveelement]][[1]]$CalTable$ForestTrees
-        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveelement]])==TRUE && is.null(calFileContents()$calList[[input$calcurveelement]])==TRUE){
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==FALSE){
+            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$ForestTrees
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$ForestTrees
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$ForestTrees
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["ForestTrees"]]
         }
         
@@ -2693,7 +2693,7 @@ content = function(file) {
     
     foresthold <- reactiveValues()
     
-    observeEvent(input$calcurveelement, {
+    observeEvent(input$calcurveline, {
         foresthold$metric <- calForestMetricSelectionpre()
         foresthold$train <- calForestTCSelectionpre()
         foresthold$number <- calForestNumberSelectionpre()
@@ -3253,11 +3253,21 @@ content = function(file) {
         
     })
     
+    plotDimensions <- reactive({
+        
+        if(input$imagesize=="Small"){
+            c(14, 4)
+        } else if(input$imagesize=="Large"){
+            c(20, 8)
+        }
+        
+    })
+    
     
     output$downloadcloudplot <- downloadHandler(
     filename = function() { paste(paste(c(input$projectname, "_", input$calcurveline), collapse=''), '.tiff',  sep='') },
     content = function(file) {
-        ggsave(file,calPlotDownload(), device="tiff", compression="lzw", type="cairo", dpi=300, width=12, height=7)
+        ggsave(file,calPlotDownload(), device="tif",  dpi=300, width=plotDimensions()[1], height=plotDimensions()[2])
     }
     )
     
@@ -4619,12 +4629,17 @@ content = function(file) {
     
     
     
-    calList <- reactiveValues()
+    #calList <- reactiveValues()
     
-    observeEvent(!is.null(input$file1), {
-        isolate(calList <- emptyList())
+    observeEvent(input$actionprocess, {
+        isolate(calList <- if(input$usecalfile==FALSE){
+            emptyList()
+        } else if(input$usecalfile==TRUE){
+            calFileContents()[["calList"]]
+        })
         calList <<- calList
     })
+    
     
     
     
@@ -4637,8 +4652,32 @@ content = function(file) {
         norm.min <- input$comptonmin
         norm.max <- input$comptonmax
         
-        cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max)
-        colnames(cal.table) <- c("CalType", "NormType", "Min", "Max")
+        forestmetric <- if(input$radiocal==4 | input$radiocal==5){
+            as.character(input$forestmetric)
+        } else if(input$radiocal!=4 | input$radiocal!=5){
+            "RMSE"
+        }
+        
+        foresttrain <- if(input$radiocal==4 | input$radiocal==5){
+            as.character(input$foresttrain)
+        } else if(input$radiocal!=4 | input$radiocal!=5){
+            "cv"
+        }
+        
+        forestnumber <- if(input$radiocal==4 | input$radiocal==5){
+            as.numeric(input$forestnumber)
+        } else if(input$radiocal!=4 | input$radiocal!=5){
+            as.numeric(10)
+        }
+        
+        foresttrees <- if(input$radiocal==4 | input$radiocal==5){
+            as.numeric(input$foresttrees)
+        } else if(input$radiocal!=4 | input$radiocal!=5){
+            as.numeric(15)
+        }
+        
+        cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max, forestmetric, foresttrain, forestnumber, foresttrees)
+        colnames(cal.table) <- c("CalType", "NormType", "Min", "Max", "ForestMetric", "ForestTC", "ForestNumber", "ForestTrees")
         
         slope.corrections <- input$slope_vars
         intercept.corrections <- input$intercept_vars

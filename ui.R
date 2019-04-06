@@ -282,7 +282,8 @@ actionButton("cropval", "Zoom")
 tags$hr(),
 actionButton("exclude_toggle", "Toggle points"),
 actionButton("exclude_reset", "Reset"),
-downloadButton('downloadcloudplot', "Plot")
+downloadButton('downloadcloudplot', "Plot"),
+selectInput('imagesize', "Image Size", choices=c("Small", "Large"), selected="Large")
 
 ),
 

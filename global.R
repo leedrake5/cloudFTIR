@@ -19,6 +19,22 @@ library(data.table)
 
 Sys.setenv(R_MAX_VSIZE = 16e9)
 
+get_os <- function(){
+    sysinf <- Sys.info()
+    if (!is.null(sysinf)){
+        os <- sysinf['sysname']
+        if (os == 'Darwin')
+        os <- "osx"
+    } else { ## mystery machine
+        os <- .Platform$OS.type
+        if (grepl("^darwin", R.version$os))
+        os <- "osx"
+        if (grepl("linux-gnu", R.version$os))
+        os <- "linux"
+    }
+    tolower(os)
+}
+
 
 my.cores <- if(parallel::detectCores()>=3){
                 paste0(parallel::detectCores()-2)
@@ -920,7 +936,7 @@ spectra_table_ftir <- function(spectra, concentration){
 
 
 
-spectra_simp_prep_ftir <- function(spectra, compression){
+spectra_simp_prep_ftir <- function(spectra, compression=0){
     
     spectra$Wavenumber <- round(spectra$Wavenumber, compression)
     spectra <- data.table(spectra)
@@ -934,7 +950,7 @@ spectra_simp_prep_ftir <- function(spectra, compression){
     
 }
 
-spectra_tc_prep_ftir <- function(spectra, compression){
+spectra_tc_prep_ftir <- function(spectra, compression=0){
     
     spectra$Wavenumber <- round(spectra$Wavenumber, compression)
     
@@ -956,7 +972,7 @@ spectra_tc_prep_ftir <- function(spectra, compression){
     
 }
 
-spectra_comp_prep_ftir <- function(spectra, compression, norm.min, norm.max){
+spectra_comp_prep_ftir <- function(spectra, compression=0, norm.min, norm.max){
     
     compton.norm <- subset(spectra$Amplitude, !(spectra$Wavenumber < norm.min | spectra$Wavenumber > norm.max))
     compton.file <- subset(spectra$Spectrum, !(spectra$Wavenumber < norm.min | spectra$Wavenumber > norm.max))
