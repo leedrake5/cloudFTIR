@@ -1,6 +1,12 @@
-list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "broom", "shinyjs", "gridExtra", "dtplyr", "formattable", "XML", "corrplot", "scales", "rmarkdown", "markdown", "peakPick", "shinyWidgets", "soil.spec", "data.table", "baseline", "pls", "prospectr", "doSNOW", "parallel", "caret")
+list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "broom", "shinyjs", "gridExtra", "dtplyr", "formattable", "XML", "corrplot", "scales", "rmarkdown", "markdown", "peakPick", "shinyWidgets", "data.table", "baseline", "pls", "prospectr", "doSNOW", "parallel", "caret")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
+
+if ("soil.spec" %in% installed.packages()[,"Package"]==FALSE){
+    install.packages("soil.spec_2.1.4.tar", repos=NULL, type="source")
+}
+
+library(soil.spec)
 
 options(warn=-1)
 assign("last.warning", NULL, envir = baseenv())
