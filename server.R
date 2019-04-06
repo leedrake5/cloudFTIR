@@ -3256,7 +3256,7 @@ content = function(file) {
     plotDimensions <- reactive({
         
         if(input$imagesize=="Small"){
-            c(14, 4)
+            c(10, 4)
         } else if(input$imagesize=="Large"){
             c(20, 8)
         }
@@ -3707,7 +3707,7 @@ content = function(file) {
     output$downloadcloudplotrandomized <- downloadHandler(
     filename = function() { paste(paste(c(input$projectname, "_", input$calcurveline), collapse=''), '.tiff',  sep='') },
     content = function(file) {
-        ggsave(file,calPlotDownloadRandomized(), device="tiff", compression="lzw", type="cairo", dpi=300, width=12, height=7)
+        ggsave(file,calPlotDownloadRandomized(), device="tiff", compression="lzw", type="cairo", dpi=300, width=plotDimensions()[1], height=plotDimensions()[2])
     }
     )
     
