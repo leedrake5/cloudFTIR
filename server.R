@@ -3267,7 +3267,7 @@ content = function(file) {
     output$downloadcloudplot <- downloadHandler(
     filename = function() { paste(paste(c(input$projectname, "_", input$calcurveline), collapse=''), '.tiff',  sep='') },
     content = function(file) {
-        ggsave(file,calPlotDownload(), device="tif",  dpi=300, width=plotDimensions()[1], height=plotDimensions()[2])
+        ggsave(file,calPlotDownload(), device="tiff",  dpi=300, width=plotDimensions()[1], height=plotDimensions()[2])
     }
     )
     
