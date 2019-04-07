@@ -8,8 +8,8 @@ library(rhandsontable)
 library(Cairo)
 library(shinyWidgets)
 
-options(warn=-1)
-assign("last.warning", NULL, envir = baseenv())
+#options(warn=-1)
+#assign("last.warning", NULL, envir = baseenv())
 
 
 
@@ -18,7 +18,7 @@ ui=list(
 tagList(
 header=tags$head(tags$style(".table .alignRight {color: black; text-align:right;}"))),
 
-tags$head(tags$script("$(function() {$.fn.dataTableExt.errMode = 'throw';});")),
+#tags$head(tags$script("$(function() {$.fn.dataTableExt.errMode = 'throw';});")),
 
 shinyUI(navbarPage("cloudFTIR", id="nav", theme = shinytheme("yeti"),
 
@@ -86,10 +86,10 @@ checkboxInput('usecalfile', "Use Cal File")
 
 mainPanel(
 
-tags$style(type="text/css",
-".shiny-output-error { visibility: hidden; }",
-".shiny-output-error:before { visibility: hidden; }"
-),
+#tags$style(type="text/css",
+#".shiny-output-error { visibility: hidden; }",
+#".shiny-output-error:before { visibility: hidden; }"
+#),
 tabsetPanel(
 tabPanel("Plot",
     div(
@@ -213,7 +213,7 @@ fluidRow(
 sidebarLayout(
 sidebarPanel(width=3,
 
-
+uiOutput('mclrunui'),
 actionButton('createcalelement', "Update"),
 actionButton('createcal', "Save"),
 tags$hr(),
@@ -240,7 +240,17 @@ uiOutput('foresttrainui'),
 
 uiOutput('forestnumberui'),
 
+uiOutput('foresttryui'),
+
 uiOutput('foresttreesui'),
+
+uiOutput('neuralhiddenlayersui'),
+
+uiOutput('neuralhiddenunitsui'),
+
+uiOutput('neuralweightdecayui'),
+
+uiOutput('neuralmaxiterationsui'),
 
 uiOutput('normTypeInput'),
 

@@ -28,12 +28,13 @@ library(prospectr)
 library(pls)
 library(baseline)
 library(doParallel)
+pdf(NULL)
 
 
 pdf(NULL)
-options(shiny.maxRequestSize=30*1024^2)
-options(warn=-1)
-assign("last.warning", NULL, envir = baseenv())
+options(shiny.maxRequestSize=30*1024^40)
+#options(warn=-1)
+#assign("last.warning", NULL, envir = baseenv())
 
 shinyServer(function(input, output, session) {
     
@@ -492,7 +493,7 @@ shinyServer(function(input, output, session) {
 
         dataCount <- reactive({
     
-            length(dataManipulate()$Spectrum)
+            length(unique(dataManipulate()$Spectrum))
     
         })
         
@@ -1501,13 +1502,18 @@ shinyServer(function(input, output, session) {
         norm.max <- 2250
         
         
+        foresttry <- as.numeric(7)
         forestmetric <- as.character("RMSE")
-        foresttrain <- as.character("cv")
+        foresttrain <- as.character("repeatedcv")
         forestnumber <- as.numeric(10)
         foresttrees <- as.numeric(100)
+        neuralhiddenlayers <- as.numeric(1)
+        neuralhiddenunits <- paste0(1, "-", 4)
+        neuralweightdecay <- paste0(0.1, "-", 0.5)
+        neuralmaxiterations <- as.numeric(1000)
         
-        cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max, forestmetric, foresttrain, forestnumber, foresttrees)
-        colnames(cal.table) <- c("CalType", "NormType", "Min", "Max", "ForestMetric", "ForestTC", "ForestNumber", "ForestTrees")
+        cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max, foresttry, forestmetric, foresttrain, forestnumber, foresttrees, neuralhiddenlayers, neuralhiddenunits, neuralweightdecay, neuralmaxiterations, stringsAsFactors=FALSE)
+        colnames(cal.table) <- c("CalType", "NormType", "Min", "Max", "ForestTry", "ForestMetric", "ForestTC", "ForestNumber", "ForestTrees", "NeuralHL", "NeuralHU", "NeuralWD", "NeuralMI")
         
         slope.corrections <- NULL
         intercept.corrections <- NULL
@@ -1526,7 +1532,57 @@ shinyServer(function(input, output, session) {
     })
     
     
+    observeEvent(input$radiocal, {
+        calConditons[["CalTable"]]$CalType <- as.numeric(input$radiocal)
+    })
     
+    observeEvent(input$normtype, {
+        calConditons[["CalTable"]]$NormType <- as.numeric(input$normcal)
+    })
+    
+    observeEvent(input$comptonmin, {
+        calConditons[["CalTable"]]$Min <- as.numeric(input$comptonmin)
+    })
+    
+    observeEvent(input$comptonmax, {
+        calConditons[["CalTable"]]$Max <- as.numeric(input$comptonmax)
+    })
+    
+    observeEvent(input$foresttry, {
+        calConditons[["CalTable"]]$ForestTry <- as.numeric(input$foresttry)
+    })
+    
+    observeEvent(input$forestmetric, {
+        calConditons[["CalTable"]]$ForestMetric <- as.character(input$forestmetric)
+    })
+    
+    observeEvent(input$foresttrain, {
+        calConditons[["CalTable"]]$ForestTC <- as.character(input$foresttrain)
+    })
+    
+    observeEvent(input$forestnumber, {
+        calConditons[["CalTable"]]$ForestNumber <- as.numeric(input$forestnumber)
+    })
+    
+    observeEvent(input$foresttrees, {
+        calConditons[["CalTable"]]$ForestTrees <- as.numeric(input$foresttrees)
+    })
+    
+    observeEvent(input$neuralhiddenlayers, {
+        calConditons[["CalTable"]]$NeuralHL <- as.numeric(input$neuralhiddenlayers)
+    })
+    
+    observeEvent(input$neuralhiddenunits, {
+        calConditons[["CalTable"]]$NeuralHU <- paste0(input$neuralhiddenunits[[1]], "-", input$neuralhiddenunits[[2]])
+    })
+    
+    observeEvent(input$neuralweightdecay, {
+        calConditons[["CalTable"]]$NeuralWD <- paste0(input$neuralweightdecay[[1]], "-", input$neuralweightdecay[[2]])
+    })
+    
+    observeEvent(input$neuralmaxiterations, {
+        calConditons[["CalTable"]]$NeuralMI <- as.numeric(input$neuralmaxiterations)
+    })
     
     
  
@@ -2361,6 +2417,15 @@ content = function(file) {
         
     })
     
+    forestParameters <- reactiveValues()
+    observeEvent(input$mclrun, {
+        forestParameters$foresttry <- input$foresttry
+        forestParameters$forestmetric <- input$forestmetric
+        forestParameters$foresttrain <- input$foresttrain
+        forestParameters$forestnumber <- input$forestnumber
+        forestParameters$foresttrees <- input$foresttrees
+    })
+    
     forestModel <- reactive({
         predict.frame <- predictFrameForest()
         
@@ -2372,6 +2437,9 @@ content = function(file) {
             #}
             #randomForest(Concentration~., data=predictFrameForest(), na.action=na.omit, ntree=200, nPerm=10)
             
+            rf.grid <- expand.grid(.mtry=forestParameters$foresttry)
+
+            
             cl <- if(get_os()=="windows"){
                 makePSOCKcluster(as.numeric(my.cores))
             } else if(get_os()!="windows"){
@@ -2379,9 +2447,9 @@ content = function(file) {
             }
             registerDoParallel(cl)
             
-            rf_model<-caret::train(Concentration~.,data=predict.frame[vals$keeprows,, drop=FALSE],method="rf", type="Regression",
-            trControl=trainControl(method=input$foresttrain,number=input$forestnumber), ntree=input$foresttrees, metric=input$forestmetric,
-            prox=TRUE,allowParallel=TRUE, importance=TRUE)
+            rf_model<-caret::train(Concentration~.,data=predictFrameForest()[vals$keeprows,, drop=FALSE],method="rf", type="Regression",
+            trControl=trainControl(method=forestParameters$foresttrain, number=forestParameters$forestnumber), ntree=forestParameters$foresttrees,
+            prox=TRUE,allowParallel=TRUE, importance=TRUE, metric=forestParameters$forestmetric, tuneGrid=rf.grid, na.action=na.omit, trim=TRUE)
             
             stopCluster(cl)
             rf_model
@@ -2482,31 +2550,19 @@ content = function(file) {
         
     })
     
+    rainforestParameters <- reactiveValues()
+    observeEvent(input$mclrun, {
+        rainforestParameters$foresttry <- input$foresttry
+        rainforestParameters$forestmetric <- input$forestmetric
+        rainforestParameters$foresttrain <- input$foresttrain
+        rainforestParameters$forestnumber <- input$forestnumber
+        rainforestParameters$foresttrees <- input$foresttrees
+    })
+    
     
     rainforestModel <- reactive({
-        #spectra.data <- rainforestData()
-        #index <- rep(1000/as.numeric(my.cores), as.numeric(my.cores))
         
-        #do.call(combine, pblapply(rep(1000/as.numeric(my.cores), as.numeric(my.cores)), function(x) randomForest(Concentration~., data=spectra.data, na.action=na.omit, ntree=x, nPerm=10, norm.votes=FALSE), cl=my.cores))
-
-        #forest.list <- pblapply(index, function(x) randomForest(Concentration~., data=spectra.data, na.action=na.omit, ntree=x, nPerm=10, norm.votes=FALSE), cl=my.cores)
-        #my_combine(forest.list)
-        #ntree <- rep(1000/as.numeric(my.cores), as.numeric(my.cores))
-        #rf.formula <- as.formula(paste("Concentration","~",paste(".")))
-        #foreach(ntree=ntree, .combine=combine, .multicombine=TRUE,
-        #.packages='randomForest') %dopar% {
-        #   environment(rf.formula) <- environment()
-        #    randomForest(rf.formula, data=spectra.data, na.action=na.omit, ntree=ntree, nPerm=10, norm.votes=FALSE)
-        #}
-        
-        
-        
-
-
-        #result <- do.call(what=randomForest::combine, args=forest.list)
-        #result
-
-        #randomForest(Concentration~., data=rainforestData(), na.action=na.omit, ntree=200, nPerm=10)
+        rf.grid <- expand.grid(.mtry=rainforestParameters$foresttry)
 
         cl <- if(get_os()=="windows"){
             makePSOCKcluster(as.numeric(my.cores))
@@ -2515,9 +2571,9 @@ content = function(file) {
         }
         registerDoParallel(cl)
         
-        rf_model<-caret::train(Concentration~.,data=rainforestData()[vals$keeprows,, drop=FALSE],method="rf", type="Regression",
-        trControl=trainControl(method=input$foresttrain,number=input$forestnumber), ntree=input$foresttrees, metric=input$forestmetric,
-        prox=TRUE,allowParallel=TRUE, na.action=na.omit, importance=TRUE)
+        rf_model<-caret::train(Concentration~.,data=rainforestData()[vals$keeprows,, drop=FALSE], method="rf", type="Regression",
+        trControl=trainControl(method=rainforestParameters$foresttrain, number=rainforestParameters$forestnumber), ntree=rainforestParameters$foresttrees,
+        prox=TRUE,allowParallel=TRUE, metric=rainforestParameters$forestmetric, tuneGrid=rf.grid, na.action=na.omit, importance=TRUE, trim=TRUE)
         
         
         stopCluster(cl)
@@ -2527,6 +2583,211 @@ content = function(file) {
     })
     
     
+    neuralNetworkIntensityShallowParameters <- reactiveValues()
+    observeEvent(input$mclrun, {
+        neuralNetworkIntensityShallowParameters$forestmetric <- input$forestmetric
+        neuralNetworkIntensityShallowParameters$foresttrain <- input$foresttrain
+        neuralNetworkIntensityShallowParameters$forestnumber <- input$forestnumber
+        neuralNetworkIntensityShallowParameters$neuralweightdecay <- input$neuralweightdecay
+        neuralNetworkIntensityShallowParameters$neuralhiddenunits <- input$neuralhiddenunits
+        neuralNetworkIntensityShallowParameters$neuralmaxiterations <- input$neuralmaxiterations
+    })
+    
+    neuralNetworkIntensityShallow <- reactive({
+        
+        nn.grid <- expand.grid(
+        .decay = seq(neuralNetworkIntensityShallowParameters$neuralweightdecay[1], neuralNetworkIntensityShallowParameters$neuralweightdecay[2], 0.1),
+        .size = seq(neuralNetworkIntensityShallowParameters$neuralhiddenunits[1], neuralNetworkIntensityShallowParameters$neuralhiddenunits[2], 1))
+        
+        cl <- if(get_os()=="windows"){
+            parallel::makePSOCKcluster(as.numeric(my.cores))
+        } else if(get_os()!="windows"){
+            parallel::makeForkCluster(as.numeric(my.cores))
+        }
+        registerDoParallel(cl)
+        
+        nn_model<-caret::train(Concentration~.,data=predictFrameForest()[vals$keeprows,, drop=FALSE], method="nnet", linout=TRUE, trControl=trainControl(method=neuralNetworkIntensityShallowParameters$foresttrain, number=neuralNetworkIntensityShallowParameters$forestnumber), allowParallel=TRUE, metric=neuralNetworkIntensityShallowParameters$forestmetric, na.action=na.omit, importance=TRUE, tuneGrid=nn.grid, maxit=neuralNetworkIntensityShallowParameters$neuralmaxiterations, trace=F, trim=TRUE)
+        
+        
+        stopCluster(cl)
+        nn_model
+        
+    })
+    
+    neuralNetworkIntensityDeepParameters <- reactiveValues()
+    observeEvent(input$mclrun, {
+        neuralNetworkIntensityDeepParameters$foresttry <- input$foresttry
+        neuralNetworkIntensityDeepParameters$forestmetric <- input$forestmetric
+        neuralNetworkIntensityDeepParameters$foresttrain <- input$foresttrain
+        neuralNetworkIntensityDeepParameters$forestnumber <- input$forestnumber
+        neuralNetworkIntensityDeepParameters$neuralhiddenlayers <- input$neuralhiddenlayers
+        neuralNetworkIntensityDeepParameters$neuralhiddenunits <- input$neuralhiddenunits
+    })
+    
+    neuralNetworkIntensityDeep <- reactive({
+        
+        data <- predictFrameForest()
+        
+        nn.grid <- if(neuralNetworkIntensityDeepParameters$neuralhiddenlayers == 2){
+            expand.grid(
+            .layer1 = seq(neuralNetworkIntensityDeepParameters$neuralhiddenunits[1], neuralNetworkIntensityDeepParameters$neuralhiddenunits[2], 1),
+            .layer2 = seq(neuralNetworkIntensityDeepParameters$neuralhiddenunits[1], neuralNetworkIntensityDeepParameters$neuralhiddenunits[2], 1),
+            .layer3 = c(0)
+            )
+        } else if(neuralNetworkIntensityDeepParameters$neuralhiddenlayers == 3){
+            expand.grid(
+            .layer1 = seq(neuralNetworkIntensityDeepParameters$neuralhiddenunits[1], neuralNetworkIntensityDeepParameters$neuralhiddenunits[2], 1),
+            .layer2 = seq(neuralNetworkIntensityDeepParameters$neuralhiddenunits[1], neuralNetworkIntensityDeepParameters$neuralhiddenunits[2], 1),
+            .layer3 = seq(neuralNetworkIntensityDeepParameters$neuralhiddenunits[1], neuralNetworkIntensityDeepParameters$neuralhiddenunits[2], 1)
+            )
+        }
+        
+        cl <- if(get_os()=="windows"){
+            parallel::makePSOCKcluster(as.numeric(my.cores))
+        } else if(get_os()!="windows"){
+            parallel::makeForkCluster(as.numeric(my.cores))
+        }
+        registerDoParallel(cl)
+        
+        f <- as.formula(paste("Concentration ~", paste(names(data)[!names(data) %in% "Concentration"], collapse = " + ")))
+        
+        nn_model<-caret::train(f,data=data[vals$keeprows,, drop=FALSE], method="neuralnet", rep=neuralNetworkIntensityDeepParameters$foresttry, trControl=trainControl(method=neuralNetworkIntensityDeepParameters$foresttrain, number=neuralNetworkIntensityDeepParameters$forestnumber), metric=neuralNetworkIntensityDeepParameters$forestmetric, na.action=na.omit,  tuneGrid=nn.grid, linear.output=TRUE)
+        
+        
+        stopCluster(cl)
+        nn_model
+        
+    })
+    
+    neuralNetworkIntensityModel <- reactive({
+        
+        if(input$neuralhiddenlayers == 1){
+            neuralNetworkIntensityShallow()
+        } else if(input$neuralhiddenlayers > 1){
+            neuralNetworkIntensityDeep()
+        }
+        
+    })
+    
+    
+    neuralNetworkSpectraShallowParameters <- reactiveValues()
+    observeEvent(input$mclrun, {
+        neuralNetworkSpectraShallowParameters$forestmetric <- input$forestmetric
+        neuralNetworkSpectraShallowParameters$foresttrain <- input$foresttrain
+        neuralNetworkSpectraShallowParameters$forestnumber <- input$forestnumber
+        neuralNetworkSpectraShallowParameters$neuralweightdecay <- input$neuralweightdecay
+        neuralNetworkSpectraShallowParameters$neuralhiddenunits <- input$neuralhiddenunits
+        neuralNetworkSpectraShallowParameters$neuralmaxiterations <- input$neuralmaxiterations
+    })
+    
+    neuralNetworkSpectraShallow <- reactive({
+        
+        nn.grid <- expand.grid(
+        .decay = seq(neuralNetworkSpectraShallowParameters$neuralweightdecay[1], neuralNetworkSpectraShallowParameters$neuralweightdecay[2], 0.1),
+        .size = seq(neuralNetworkSpectraShallowParameters$neuralhiddenunits[1], neuralNetworkSpectraShallowParameters$neuralhiddenunits[2], 1))
+        
+        cl <- if(get_os()=="windows"){
+            parallel::makePSOCKcluster(as.numeric(my.cores))
+        } else if(get_os()!="windows"){
+            parallel::makeForkCluster(as.numeric(my.cores))
+        }
+        registerDoParallel(cl)
+        
+        nn_model<-caret::train(Concentration~.,data=rainforestData()[vals$keeprows,, drop=FALSE], method="nnet", linout=TRUE, trControl=trainControl(method=neuralNetworkSpectraShallowParameters$foresttrain, number=neuralNetworkSpectraShallowParameters$forestnumber), allowParallel=TRUE, metric=neuralNetworkSpectraShallowParameters$forestmetric, na.action=na.omit, importance=TRUE, tuneGrid=nn.grid, maxit=neuralNetworkSpectraShallowParameters$neuralmaxiterations, trace=F, trim=TRUE)
+        
+        
+        stopCluster(cl)
+        nn_model
+        
+    })
+    
+    
+    neuralNetworkSpectraDeepParameters <- reactiveValues()
+    observeEvent(input$mclrun, {
+        neuralNetworkSpectraDeepParameters$foresttry <- input$foresttry
+        neuralNetworkSpectraDeepParameters$forestmetric <- input$forestmetric
+        neuralNetworkSpectraDeepParameters$foresttrain <- input$foresttrain
+        neuralNetworkSpectraDeepParameters$forestnumber <- input$forestnumber
+        neuralNetworkSpectraDeepParameters$neuralhiddenlayers <- input$neuralhiddenlayers
+        neuralNetworkSpectraDeepParameters$neuralhiddenunits <- input$neuralhiddenunits
+    })
+    
+    neuralNetworkSpectraDeep <- reactive({
+        
+        data <- rainforestData()
+        
+        nn.grid <- if(neuralNetworkSpectraDeepParameters$neuralhiddenlayers == 2){
+            expand.grid(
+            .layer1 = seq(neuralNetworkSpectraDeepParameters$neuralhiddenunits[1], neuralNetworkSpectraDeepParameters$neuralhiddenunits[2], 1),
+            .layer2 = seq(neuralNetworkSpectraDeepParameters$neuralhiddenunits[1], neuralNetworkSpectraDeepParameters$neuralhiddenunits[2], 1),
+            .layer3 = c(0)
+            )
+        } else if(neuralNetworkSpectraDeepParameters$neuralhiddenlayers == 3){
+            expand.grid(
+            .layer1 = seq(neuralNetworkSpectraDeepParameters$neuralhiddenunits[1], neuralNetworkSpectraDeepParameters$neuralhiddenunits[2], 1),
+            .layer2 = seq(neuralNetworkSpectraDeepParameters$neuralhiddenunits[1], neuralNetworkSpectraDeepParameters$neuralhiddenunits[2], 1),
+            .layer3 = seq(neuralNetworkSpectraDeepParameters$neuralhiddenunits[1], neuralNetworkSpectraDeepParameters$neuralhiddenunits[2], 1)
+            )
+        }
+        
+        cl <- if(get_os()=="windows"){
+            parallel::makePSOCKcluster(as.numeric(my.cores))
+        } else if(get_os()!="windows"){
+            parallel::makeForkCluster(as.numeric(my.cores))
+        }
+        registerDoParallel(cl)
+        
+        f <- as.formula(paste("Concentration ~", paste(names(data)[!names(data) %in% "Concentration"], collapse = " + ")))
+        nn_model<-caret::train(f,data=data[vals$keeprows,, drop=FALSE], method="neuralnet", rep=neuralNetworkSpectraDeepParameters$foresttry, trControl=trainControl(method=neuralNetworkSpectraDeepParameters$foresttrain, number=neuralNetworkSpectraDeepParameters$forestnumber), metric=neuralNetworkSpectraDeepParameters$forestmetric, na.action=na.omit, tuneGrid=nn.grid, linear.output=TRUE)
+        
+        
+        stopCluster(cl)
+        nn_model
+        
+    })
+    
+    
+    neuralNetworkSpectraDeepKeras <- reactive({
+        
+        x_train <- as.matrix(rainforestIntensity())[vals$keeprows,]
+        y_train <- rainforestData()$Concentration[vals$keeprows]
+        
+        channels <- length(x_train)/length(y_train)
+        
+        model <- keras_model_sequential() %>%
+        layer_dense(channels, kernel_initializer='normal', activation='relu') %>%
+        layer_dropout(0.2) %>%
+        layer_dense(channels, activation='relu') %>%
+        layer_dropout(0.2) %>%
+        layer_dense(channels, kernel_initializer='normal', activation='relu') %>%
+        layer_dropout(0.2) %>%
+        layer_dense(channels, activation='relu') %>%
+        layer_dropout(0.2) %>%
+        layer_dense(1, activation='linear')
+        
+        model %>% compile(loss='mse', optimizer='adam', metrics=list('mse','mae'))
+        
+        result <- model %>% fit(
+        x_train, y_train,
+        batch_size = 100,
+        epochs = 2000,
+        validation_split = 0.2,
+        verbose=0
+        )
+        
+        model
+        
+    })
+    
+    neuralNetworkSpectraModel <- reactive({
+        
+        if(input$neuralhiddenlayers == 1){
+            neuralNetworkSpectraShallow()
+        } else if(input$neuralhiddenlayers > 1){
+            neuralNetworkSpectraDeep()
+        }
+        
+    })
     
     
     
@@ -2620,6 +2881,37 @@ content = function(file) {
     
     ###Machine Learning Parameters
     
+    maxSample <- reactive({
+        
+        ncol(predictAmplitude())
+        
+    })
+    
+    
+    defaultSample <- reactive({
+        
+        floor(sqrt(ncol(predictAmplitude())))
+        
+    })
+    
+    calForestTrySelectionpre <- reactive({
+        
+        
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==TRUE){
+            calConditons[["CalTable"]][["ForestTry"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==FALSE){
+            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$ForestTry
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$ForestTry
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$ForestTry
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
+            calConditons[["CalTable"]][["ForestTry"]]
+        }
+        
+    })
+    
+    
     calForestMetricSelectionpre <- reactive({
         
         
@@ -2690,14 +2982,104 @@ content = function(file) {
         
     })
     
+    calHiddenLayersSelectionpre <- reactive({
+        
+        
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHL"]])==TRUE){
+            hold <- calConditons[["CalTable"]][["NeuralHL"]]
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHL"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHL"]])==FALSE){
+            hold <- calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$NeuralHL
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHL"]])==FALSE){
+            hold <- calList[[input$calcurveline]][[1]]$CalTable$NeuralHL
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHL"]])==FALSE){
+            hold <- calList[[input$calcurveline]][[1]]$CalTable$NeuralHL
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHL"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHL"]])==TRUE){
+            hold <- calConditons[["CalTable"]][["NeuralHL"]]
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        }
+        
+    })
+    
+    calHiddenUnitsSelectionpre <- reactive({
+        
+        
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHU"]])==TRUE){
+            hold <- calConditons[["CalTable"]][["NeuralHU"]]
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHU"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHU"]])==FALSE){
+            hold <- calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$NeuralHU
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHU"]])==FALSE){
+            hold <- calList[[input$calcurveline]][[1]]$CalTable$NeuralHU
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHU"]])==FALSE){
+            hold <- calList[[input$calcurveline]][[1]]$CalTable$NeuralHU
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHU"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHU"]])==TRUE){
+            hold <- calConditons[["CalTable"]][["NeuralHU"]]
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        }
+        
+    })
+    
+    calWeightDecaySelectionpre <- reactive({
+        
+        
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralWD"]])==TRUE){
+            hold <- calConditons[["CalTable"]][["NeuralWD"]]
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralWD"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralWD"]])==FALSE){
+            hold <- calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$NeuralWD
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralWD"]])==FALSE){
+            hold <- calList[[input$calcurveline]][[1]]$CalTable$NeuralWD
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralWD"]])==FALSE){
+            hold <- calList[[input$calcurveline]][[1]]$CalTable$NeuralWD
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralWD"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralWD"]])==TRUE){
+            hold <- calConditons[["CalTable"]][["NeuralWD"]]
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        }
+        
+    })
+    
+    calMaxIterationsSelectionpre <- reactive({
+        
+        
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==TRUE){
+            calConditons[["CalTable"]][["NeuralMI"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==FALSE){
+            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$NeuralMI
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$NeuralMI
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$NeuralMI
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
+            calConditons[["CalTable"]][["NeuralMI"]]
+        }
+        
+    })
+    
     
     foresthold <- reactiveValues()
+    neuralhold <- reactiveValues()
+    
     
     observeEvent(input$calcurveline, {
+        foresthold$try <- calForestTrySelectionpre()
         foresthold$metric <- calForestMetricSelectionpre()
         foresthold$train <- calForestTCSelectionpre()
         foresthold$number <- calForestNumberSelectionpre()
         foresthold$trees <- calForestTreeSelectionpre()
+        neuralhold$hiddenlayers <- calHiddenLayersSelectionpre()
+        neuralhold$hiddenunits <- calHiddenUnitsSelectionpre()
+        neuralhold$weightdecay <- calWeightDecaySelectionpre()
+        neuralhold$maxiterations <- calMaxIterationsSelectionpre()
     })
     
     
@@ -2708,6 +3090,10 @@ content = function(file) {
     #})
     
     
+    
+    forestTrySelection <- reactive({
+        foresthold$try
+    })
     
     forestMetricSelection <- reactive({
         foresthold$metric
@@ -2725,10 +3111,24 @@ content = function(file) {
         foresthold$trees
     })
     
+    neuralHiddenLayersSelection <- reactive({
+        neuralhold$hiddenlayers
+    })
+    
+    neuralHiddenUnitsSelection <- reactive({
+        neuralhold$hiddenunits
+    })
+    
+    neuralWeightDecaySelection <- reactive({
+        neuralhold$weightdecay
+    })
+    
+    neuralMaxIterationsSelection <- reactive({
+        neuralhold$maxiterations
+    })
     
     
-    
-    output$forestmetricui <- renderUI({
+    output$mclrunui <- renderUI({
         
         if(input$radiocal==1){
             NULL
@@ -2737,60 +3137,54 @@ content = function(file) {
         } else if(input$radiocal==3){
             NULL
         } else if(input$radiocal==4){
-            selectInput("forestmetric", label="Metric", choices=c("Root Mean Square Error"="RMSE", "R2"="Rsquared", "ROC Curve"="ROC", "Logarithmic Loss"="logLoss"), selected=forestMetricSelection())
-        } else if(input$radiocal==5){
-            selectInput("forestmetric", label="Metric", choices=c("Root Mean Square Error"="RMSE", "R2"="Rsquared", "ROC Curve"="ROC", "Logarithmic Loss"="logLoss"), selected=forestMetricSelection())
+            actionButton("mclrun", "Run Model")
+        }  else if(input$radiocal==5){
+            actionButton("mclrun", "Run Model")
+        } else if(input$radiocal==6){
+            actionButton("mclrun", "Run Model")
+        } else if(input$radiocal==7){
+            actionButton("mclrun", "Run Model")
         }
         
+    })
+    
+    output$foresttryui <- renderUI({
+        forestTryUI(radiocal=input$radiocal, neuralhiddenlayers=input$neuralhiddenlayers, selection=forestTrySelection(), maxsample=maxSample())
+    })
+    
+    
+    output$forestmetricui <- renderUI({
+        forestMetricUI(radiocal=input$radiocal, selection=forestMetricSelection())
     })
     
     
     output$foresttrainui <- renderUI({
-        
-        if(input$radiocal==1){
-            NULL
-        } else if(input$radiocal==2){
-            NULL
-        } else if(input$radiocal==3){
-            NULL
-        } else if(input$radiocal==4){
-            selectInput("foresttrain", label="Train Control", choices=c("k-fold Cross Validation"="cv", "Bootstrap"="boot", "0.632 Bootstrap"="boot632", "Optimism Bootstrap"="optimism_boot", "Repeated k-fold Cross Validation"="repeatedcv", "Leave One Out Cross Validation"="LOOCV", "Out of Bag Estimation"="oob"), selected=forestTrainSelection())
-        }  else if(input$radiocal==5){
-            selectInput("foresttrain", label="Train Control", choices=c("k-fold Cross Validation"="cv", "Bootstrap"="boot", "0.632 Bootstrap"="boot632", "Optimism Bootstrap"="optimism_boot", "Repeated k-fold Cross Validation"="repeatedcv", "Leave One Out Cross Validation"="LOOCV", "Out of Bag Estimation"="oob"), selected=forestTrainSelection())
-        }
-        
+        forestTrainUI(radiocal=input$radiocal, selection=forestTrainSelection())
     })
     
     output$forestnumberui <- renderUI({
-        
-        if(input$radiocal==1){
-            NULL
-        } else if(input$radiocal==2){
-            NULL
-        } else if(input$radiocal==3){
-            NULL
-        } else if(input$radiocal==4){
-            sliderInput("forestnumber", label="Iterations", min=5, max=500, value=forestNumberSelection())
-        }  else if(input$radiocal==5){
-            sliderInput("forestnumber", label="Iterations", min=5, max=500, value=forestNumberSelection())
-        }
-        
+        forestNumberUI(radiocal=input$radiocal, selection=forestNumberSelection())
     })
     
     
     output$foresttreesui <- renderUI({
-        
-        if(input$radiocal==1){
-            NULL
-        } else if(input$radiocal==2){
-            NULL
-        } else if(input$radiocal==3){
-            NULL
-        } else if(input$radiocal==4){
-            sliderInput("foresttrees", label="Trees", min=50, max=2000, value=forestTreeSelection())
-        }  else if(input$radiocal==5){
-            sliderInput("foresttrees", label="Trees", min=50, max=2000, value=forestTreeSelection())
-        }
+        forestTreesUI(radiocal=input$radiocal, selection=forestTreeSelection())
+    })
+    
+    output$neuralhiddenlayersui <- renderUI({
+        neuralHiddenLayersUI(radiocal=input$radiocal, selection=neuralHiddenLayersSelection())
+    })
+    
+    output$neuralhiddenunitsui <- renderUI({
+        neuralHiddenUnitsUi(radiocal=input$radiocal, selection=neuralHiddenUnitsSelection())
+    })
+    
+    output$neuralweightdecayui <- renderUI({
+        neuralWeightDecayUI(radiocal=input$radiocal, selection=neuralWeightDecaySelection(), neuralhiddenlayers=input$neuralhiddenlayers)
+    })
+    
+    output$neuralmaxiterationsui <- renderUI({
+        neuralMaxIterationsUI(radiocal=input$radiocal, selection=neuralMaxIterationsSelection(), neuralhiddenlayers=input$neuralhiddenlayers)
         
     })
     
@@ -2870,12 +3264,11 @@ content = function(file) {
     output$calTypeInput <- renderUI({
         
         selectInput("radiocal", label = "Calibration Curve",
-        choices = list("Linear" = 1, "Non-Linear" = 2, "Lucas-Tooth" = 3, "Forest" = 4, "Rainforest"=5),
+        choices = list("Linear" = 1, "Non-Linear" = 2, "Lucas-Tooth" = 3, "Forest" = 4, "Rainforest"=5, "Neural Network Intensities"=6, "Neural Network Spectra"=7),
         selected = calTypeSelection())
         
         
     })
-    
     
   
     
@@ -2909,6 +3302,10 @@ content = function(file) {
                 predictAmplitudeForest()
             } else if(input$radiocal==5){
                 rainforestAmplitude()
+            } else if(input$radiocal==6){
+                predictAmplitudeForest()
+            } else if(input$radiocal==7){
+                rainforestAmplitude()
             }
         
 
@@ -2927,6 +3324,10 @@ content = function(file) {
         } else if(input$radiocal==4){
             predictFrameForest()
         } else if(input$radiocal==5){
+            rainforestData()
+        } else if(input$radiocal==6){
+            predictFrameForest()
+        } else if(input$radiocal==7){
             rainforestData()
         }
         
@@ -2958,7 +3359,7 @@ content = function(file) {
     
     lineModel <- reactive({
         
-        if (input$radiocal==1){
+        if(input$radiocal==1){
             simpleLinearModel()
         } else if(input$radiocal==2){
             nonLinearModel()
@@ -2968,6 +3369,10 @@ content = function(file) {
             forestModel()
         } else if(input$radiocal==5){
             rainforestModel()
+        } else if(input$radiocal==6){
+            neuralNetworkIntensityModel()
+        } else if(input$radiocal==7){
+            neuralNetworkSpectraModel()
         }
         
     })
@@ -3042,6 +3447,35 @@ content = function(file) {
             colnames(val.frame) <- c("Concentration", "AmplitudeNorm", "Prediction")
         }
         
+        if (input$radiocal==6){
+            
+            
+            cal.est.conc.pred.luc <- predict(object=line.model, newdata=predict.amplitude)
+            #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
+            #cal.est.conc.luc <- cal.est.conc.tab$fit
+            #cal.est.conc.luc.up <- cal.est.conc.tab$upr
+            #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
+            
+            
+            val.frame <- data.frame(predict.frame$Concentration, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration",  "Intensity", "Prediction")
+        }
+        
+        
+        if (input$radiocal==7){
+            
+            
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude)
+            #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
+            #cal.est.conc.luc <- cal.est.conc.tab$fit
+            #cal.est.conc.luc.up <- cal.est.conc.tab$upr
+            #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
+            
+            
+            val.frame <- data.frame(predict.frame$Concentration, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration",  "Intensity", "Prediction")
+        }
+        
         
         
         
@@ -3058,7 +3492,6 @@ content = function(file) {
     
     calType <- reactive({
         
-        
         if(input$radiocal==1){
             1
         } else if(input$radiocal==2){
@@ -3068,6 +3501,10 @@ content = function(file) {
         } else if(input$radiocal==4){
             3
         } else if(input$radiocal==5){
+            5
+        } else if(input$radiocal==6){
+            3
+        } else if(input$radiocal==7){
             5
         }
         
@@ -3162,6 +3599,18 @@ content = function(file) {
             
         }
         
+        if(input$radiocal==6){
+            
+            calcurve.plot <- grobTree(plot.nnet(lineModel(),nid=T))
+            
+        }
+        
+        if(input$radiocal==7){
+            
+            calcurve.plot <- grobTree(plot.nnet(lineModel(),nid=T))
+            
+            
+        }
         
         
         calcurve.plot
@@ -3321,65 +3770,195 @@ content = function(file) {
         
     })
     
-
     
+    linearModelRandom <- reactive({
+        predict.frame <- calCurveFrameRandomized()
+        cal.lm <- lm(Concentration~Intensity, data=predict.frame)
+        cal.lm
+    })
+    
+    nonLinearModelRandom <- reactive({
+        predict.frame <- calCurveFrameRandomized()
+        cal.lm <- lm(Concentration~Intensity + I(Intensity^2), data=predict.frame)
+        cal.lm
+    })
+    
+    lucasToothModelRandom <- reactive({
+        predict.frame <- calCurveFrameRandomized()
+        cal.lm <- lm(Concentration~., data=predict.frame)
+        cal.lm
+    })
+    
+    forestModelRandom <- reactive({
+        predict.frame <- calCurveFrameRandomized()
+        rf.grid <- expand.grid(.mtry=forestParameters$foresttry)
+        
+        
+        cl <- if(get_os()=="windows"){
+            parallel::makePSOCKcluster(as.numeric(my.cores))
+        } else if(get_os()!="windows"){
+            parallel::makeForkCluster(as.numeric(my.cores))
+        }
+        registerDoParallel(cl)
+        
+        rf_model<-caret::train(Concentration~.,data=predict.frame, method="rf", type="Regression",
+        trControl=trainControl(method=forestParameters$foresttrain, number=forestParameters$forestnumber), ntree=forestParameters$foresttrees,
+        prox=TRUE,allowParallel=TRUE, importance=TRUE, metric=forestParameters$forestmetric, tuneGrid=rf.grid, na.action=na.omit, trim=TRUE)
+        
+        stopCluster(cl)
+        rf_model
+    })
+    
+    rainforestModelRandom <- reactive({
+        predict.frame <- calCurveFrameRandomized()
+        rf.grid <- expand.grid(.mtry=rainforestParameters$foresttry)
+        
+        
+        cl <- if(get_os()=="windows"){
+            parallel::makePSOCKcluster(as.numeric(my.cores))
+        } else if(get_os()!="windows"){
+            parallel::makeForkCluster(as.numeric(my.cores))
+        }
+        registerDoParallel(cl)
+        
+        rf_model<-caret::train(Concentration~.,data=predict.frame, method="rf", type="Regression",
+        trControl=trainControl(method=rainforestParameters$foresttrain, number=rainforestParameters$forestnumber), ntree=rainforestParameters$foresttrees,
+        prox=TRUE,allowParallel=TRUE, metric=rainforestParameters$forestmetric, tuneGrid=rf.grid, na.action=na.omit, importance=TRUE, trim=TRUE)
+        
+        
+        stopCluster(cl)
+        rf_model
+    })
+    
+    neuralNetworkIntensitiesShallowRandom <- reactive({
+        predict.frame <- calCurveFrameRandomized()
+        
+        nn.grid <- expand.grid(
+        .decay = seq(neuralNetworkIntensityShallowParameters$neuralweightdecay[1], neuralNetworkIntensityShallowParameters$neuralweightdecay[2], 0.1),
+        .size = seq(neuralNetworkIntensityShallowParameters$neuralhiddenunits[1], neuralNetworkIntensityShallowParameters$neuralhiddenunits[2], 1))
+        
+        cl <- if(get_os()=="windows"){
+            parallel::makePSOCKcluster(as.numeric(my.cores))
+        } else if(get_os()!="windows"){
+            parallel::makeForkCluster(as.numeric(my.cores))
+        }
+        registerDoParallel(cl)
+        
+        nn_model<-caret::train(Concentration~.,data=predict.frame, method="nnet", linout=TRUE, trControl=trainControl(method=neuralNetworkIntensityShallowParameters$foresttrain, number=neuralNetworkIntensityShallowParameters$forestnumber), allowParallel=TRUE, metric=neuralNetworkIntensityShallowParameters$forestmetric, na.action=na.omit, importance=TRUE, tuneGrid=nn.grid, maxit=neuralNetworkIntensityShallowParameters$neuralmaxiterations, trace=F, trim=TRUE)
+        
+        
+        stopCluster(cl)
+        nn_model
+    })
+    
+    neuralNetworkIntensitiesDeepRandom <- reactive({
+        predict.frame <- calCurveFrameRandomized()
+        
+        nn.grid <- if(neuralNetworkIntensityDeepParameters$neuralhiddenlayers == 2){
+            expand.grid(
+            .layer1 = seq(neuralNetworkIntensityDeepParameters$neuralhiddenunits[1], neuralNetworkIntensityDeepParameters$neuralhiddenunits[2], 1),
+            .layer2 = seq(neuralNetworkIntensityDeepParameters$neuralhiddenunits[1], neuralNetworkIntensityDeepParameters$neuralhiddenunits[2], 1),
+            .layer3 = c(0)
+            )
+        } else if(neuralNetworkIntensityDeepParameters$neuralhiddenlayers == 3){
+            expand.grid(
+            .layer1 = seq(neuralNetworkIntensityDeepParameters$neuralhiddenunits[1], neuralNetworkIntensityDeepParameters$neuralhiddenunits[2], 1),
+            .layer2 = seq(neuralNetworkIntensityDeepParameters$neuralhiddenunits[1], neuralNetworkIntensityDeepParameters$neuralhiddenunits[2], 1),
+            .layer3 = seq(neuralNetworkIntensityDeepParameters$neuralhiddenunits[1], neuralNetworkIntensityDeepParameters$neuralhiddenunits[2], 1)
+            )
+        }
+        
+        cl <- if(get_os()=="windows"){
+            parallel::makePSOCKcluster(as.numeric(my.cores))
+        } else if(get_os()!="windows"){
+            parallel::makeForkCluster(as.numeric(my.cores))
+        }
+        registerDoParallel(cl)
+        
+        nn_model<-caret::train(Concentration~.,data=predict.frame, method="neuralnet", rep=neuralNetworkIntensityDeepParameters$foresttry, trControl=trainControl(method=neuralNetworkIntensityDeepParameters$foresttrain, number=neuralNetworkIntensityDeepParameters$forestnumber), metric=neuralNetworkIntensityDeepParameters$forestmetric, na.action=na.omit,  tuneGrid=nn.grid, linear.output=TRUE, trim=TRUE)
+        
+        
+        stopCluster(cl)
+        nn_model
+    })
+    
+    neuralNetworkSpectraShallowRandom <- reactive({
+        predict.frame <- calCurveFrameRandomized()
+        
+        nn.grid <- expand.grid(
+        .decay = seq(neuralNetworkSpectraShallowParameters$neuralweightdecay[1], neuralNetworkSpectraShallowParameters$neuralweightdecay[2], 0.1),
+        .size = seq(neuralNetworkSpectraShallowParameters$neuralhiddenunits[1], neuralNetworkSpectraShallowParameters$neuralhiddenunits[2], 1))
+        
+        cl <- if(get_os()=="windows"){
+            parallel::makePSOCKcluster(as.numeric(my.cores))
+        } else if(get_os()!="windows"){
+            parallel::makeForkCluster(as.numeric(my.cores))
+        }
+        registerDoParallel(cl)
+        
+        nn_model<-caret::train(Concentration~.,data=predict.frame, method="nnet", linout=TRUE, trControl=trainControl(method=neuralNetworkSpectraShallowParameters$foresttrain, number=neuralNetworkSpectraShallowParameters$forestnumber), allowParallel=TRUE, metric=neuralNetworkSpectraShallowParameters$forestmetric, na.action=na.omit, importance=TRUE, tuneGrid=nn.grid, maxit=neuralNetworkSpectraShallowParameters$neuralmaxiterations, trace=F, trim=TRUE)
+        
+        
+        stopCluster(cl)
+        nn_model
+    })
+    
+    neuralNetworkSpectraDeepRandom <- reactive({
+        predict.frame <- calCurveFrameRandomized()
+        
+        nn.grid <- if(neuralNetworkSpectraDeepParameters$neuralhiddenlayers == 2){
+            expand.grid(
+            .layer1 = seq(neuralNetworkSpectraDeepParameters$neuralhiddenunits[1], neuralNetworkSpectraDeepParameters$neuralhiddenunits[2], 1),
+            .layer2 = seq(neuralNetworkSpectraDeepParameters$neuralhiddenunits[1], neuralNetworkSpectraDeepParameters$neuralhiddenunits[2], 1),
+            .layer3 = c(0)
+            )
+        } else if(neuralNetworkSpectraDeepParameters$neuralhiddenlayers == 3){
+            expand.grid(
+            .layer1 = seq(neuralNetworkSpectraDeepParameters$neuralhiddenunits[1], neuralNetworkSpectraDeepParameters$neuralhiddenunits[2], 1),
+            .layer2 = seq(neuralNetworkSpectraDeepParameters$neuralhiddenunits[1], neuralNetworkSpectraDeepParameters$neuralhiddenunits[2], 1),
+            .layer3 = seq(neuralNetworkSpectraDeepParameters$neuralhiddenunits[1], neuralNetworkSpectraDeepParameters$neuralhiddenunits[2], 1)
+            )
+        }
+        
+        cl <- if(get_os()=="windows"){
+            parallel::makePSOCKcluster(as.numeric(my.cores))
+        } else if(get_os()!="windows"){
+            parallel::makeForkCluster(as.numeric(my.cores))
+        }
+        registerDoParallel(cl)
+        
+        nn_model<-caret::train(Concentration~.,data=predict.frame, method="neuralnet", rep=neuralNetworkSpectraDeepParameters$foresttry, trControl=trainControl(method=neuralNetworkSpectraDeepParameters$foresttrain, number=neuralNetworkSpectraDeepParameters$forestnumber), metric=neuralNetworkSpectraDeepParameters$forestmetric, na.action=na.omit, tuneGrid=nn.grid, linear.output=TRUE, trim=TRUE)
+        
+        
+        stopCluster(cl)
+        nn_model
+    })
     
     lineModelRandom <- reactive({
         
-        predict.frame <- calCurveFrameRandomized()
-        
-        
-        if (input$radiocal==1){
-            cal.lm <- lm(Concentration~Amplitude, data=predict.frame)
+        if(input$radiocal==1){
+            linearModelRandom()
+        } else if(input$radiocal==2){
+            nonLinearModelRandom()
+        } else if(input$radiocal==3){
+            lucasToothModelRandom()
+        } else if(input$radiocal==4){
+            forestModelRandom()
+        } else if(input$radiocal==5){
+            rainforestModelRandom()
+        } else if(input$radiocal==6 && input$neuralhiddenlayers==1){
+            neuralNetworkIntensitiesShallowRandom()
+        } else if(input$radiocal==6 && input$neuralhiddenlayers>1){
+            neuralNetworkIntensitiesDeepRandom()
+        } else if(input$radiocal==7 && input$neuralhiddenlayers==1){
+            neuralNetworkSpectraShallowRandom()
+        } else if(input$radiocal==7 && input$neuralhiddenlayers>1){
+            neuralNetworkSpectraShallowRandom()
         }
-        
-        
-        if (input$radiocal==2){
-            cal.lm <- lm(Concentration~Amplitude + I(Amplitude^2), data=predict.frame)
-        }
-        
-        if (input$radiocal==3){
-            cal.lm <- lm(Concentration~., data=predict.frame)
-        }
-        
-        if (input$radiocal==4){
-            cl <- if(get_os()=="windows"){
-                makePSOCKcluster(as.numeric(my.cores))
-            } else if(get_os()!="windows"){
-                makeForkCluster(as.numeric(my.cores))
-            }
-            registerDoParallel(cl)
-            
-            cal.lm <-caret::train(Concentration~.,data=predict.frame,method="rf", type="Regression",
-            trControl=trainControl(method=input$foresttrain,number=input$forestnumber), ntree=input$foresttrees, metric=input$forestmetric,
-            prox=TRUE,allowParallel=TRUE, na.action=na.omit, importance=TRUE)
-            
-            
-            stopCluster(cl)
-                    }
-        
-        if (input$radiocal==5){
-            cl <- if(get_os()=="windows"){
-                makePSOCKcluster(as.numeric(my.cores))
-            } else if(get_os()!="windows"){
-                makeForkCluster(as.numeric(my.cores))
-            }
-            registerDoParallel(cl)
-            
-            cal.lm <-caret::train(Concentration~.,data=predict.frame,method="rf", type="Regression",
-            trControl=trainControl(method=input$foresttrain,number=input$forestnumber), ntree=input$foresttrees, metric=input$forestmetric,
-            prox=TRUE,allowParallel=TRUE, na.action=na.omit, importance=TRUE)
-            
-            
-            stopCluster(cl)
-        
-
-        }
-        
-        cal.lm
         
     })
     
+
     
     valFrameRandomized <- reactive({
         predict.amplitude <- predictAmplitude()[ vals$keeprows, , drop = FALSE]
@@ -3452,7 +4031,32 @@ content = function(file) {
             colnames(val.frame) <- c("Concentration", "AmplitudeNorm", "Prediction")
         }
         
+        if (input$radiocal==6){
+            
+            
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity)
+            #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
+            #cal.est.conc.luc <- cal.est.conc.tab$fit
+            #cal.est.conc.luc.up <- cal.est.conc.tab$upr
+            #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
+            
+            
+            val.frame <- data.frame(na.omit(predict.frame$Concentration), predict.intensity$Intensity, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "IntensityOrg", "Intensity", "Prediction")
+        }
         
+        if (input$radiocal==7){
+            
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity)
+            #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
+            #cal.est.conc.luc <- cal.est.conc.tab$fit
+            #cal.est.conc.luc.up <- cal.est.conc.tab$upr
+            #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
+            
+            
+            val.frame <- data.frame(predict.frame$Concentration, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "Intensity", "Prediction")
+        }
         
         
         val.frame
@@ -3524,7 +4128,27 @@ content = function(file) {
             colnames(val.frame) <- c("Concentration", "AmplitudeNorm", "Prediction")
         }
         
+        if (input$radiocal==6){
+            
+            
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity, na.action=na.omit)
+            
+            
+            
+            val.frame <- data.frame(na.omit(predict.frame)$Concentration, predict.intensity$Intensity, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "IntensityOrg", "Intensity", "Prediction")
+        }
         
+        if (input$radiocal==7){
+            
+            
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity, na.action=na.omit)
+            
+            
+            
+            val.frame <- data.frame(na.omit(predict.frame)$Concentration, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "Intensity", "Prediction")
+        }
         
         
         val.frame
@@ -3618,6 +4242,32 @@ content = function(file) {
             geom_point(aes(AmplitudeNorm, Concentration), data = val.frame, shape = 21, fill = "red", color = "black", alpha = 0.25) +
             scale_x_continuous(paste(element.name, norma)) +
             scale_y_continuous(paste(element.name, conen)) +
+            coord_cartesian(xlim = rangescalcurverandom$x, ylim = rangescalcurverandom$y, expand = TRUE)
+        }
+        
+        if(input$radiocal==6){
+            val.frame <- valFrameRandomizedRev()
+            
+            calcurve.plot <- ggplot(data=val.frame, aes(Intensity, Concentration)) +
+            theme_light() +
+            annotate("text", label=lm_eqn(lm(Concentration~., val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            geom_smooth() +
+            geom_point() +
+            scale_x_continuous(paste(element.name, norma), breaks=scales::pretty_breaks()) +
+            scale_y_continuous(paste(element.name, conen), breaks=scales::pretty_breaks()) +
+            coord_cartesian(xlim = rangescalcurverandom$x, ylim = rangescalcurverandom$y, expand = TRUE)
+        }
+        
+        if(input$radiocal==7){
+            val.frame <- valFrameRandomizedRev()
+            
+            calcurve.plot <- ggplot(data=val.frame, aes(Intensity, Concentration)) +
+            theme_light() +
+            annotate("text", label=lm_eqn(lm(Concentration~., val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            geom_smooth() +
+            geom_point() +
+            scale_x_continuous(paste(element.name, norma), breaks=scales::pretty_breaks()) +
+            scale_y_continuous(paste(element.name, conen), breaks=scales::pretty_breaks()) +
             coord_cartesian(xlim = rangescalcurverandom$x, ylim = rangescalcurverandom$y, expand = TRUE)
         }
         
@@ -4652,21 +5302,27 @@ content = function(file) {
         norm.min <- input$comptonmin
         norm.max <- input$comptonmax
         
-        forestmetric <- if(input$radiocal==4 | input$radiocal==5){
-            as.character(input$forestmetric)
+        foresttry <- if(input$radiocal==4 | input$radiocal==5){
+            as.numeric(input$foresttry)
         } else if(input$radiocal!=4 | input$radiocal!=5){
+            as.numeric(7)
+        }
+        
+        forestmetric <- if(input$radiocal==4 | input$radiocal==5 | input$radiocal==6 | input$radiocal==7){
+            as.character(input$forestmetric)
+        } else if(input$radiocal!=4 | input$radiocal!=5 | input$radiocal!=6 | input$radiocal!=7){
             "RMSE"
         }
         
-        foresttrain <- if(input$radiocal==4 | input$radiocal==5){
+        foresttrain <- if(input$radiocal==4 | input$radiocal==5 | input$radiocal==6 | input$radiocal==7){
             as.character(input$foresttrain)
-        } else if(input$radiocal!=4 | input$radiocal!=5){
+        } else if(input$radiocal!=4 | input$radiocal!=5 | input$radiocal!=6 | input$radiocal!=7){
             "cv"
         }
         
-        forestnumber <- if(input$radiocal==4 | input$radiocal==5){
+        forestnumber <- if(input$radiocal==4 | input$radiocal==5 | input$radiocal==6 | input$radiocal==7){
             as.numeric(input$forestnumber)
-        } else if(input$radiocal!=4 | input$radiocal!=5){
+        } else if(input$radiocal!=4 | input$radiocal!=5 | input$radiocal!=6 | input$radiocal!=7){
             as.numeric(10)
         }
         
@@ -4676,8 +5332,32 @@ content = function(file) {
             as.numeric(15)
         }
         
-        cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max, forestmetric, foresttrain, forestnumber, foresttrees)
-        colnames(cal.table) <- c("CalType", "NormType", "Min", "Max", "ForestMetric", "ForestTC", "ForestNumber", "ForestTrees")
+        neuralhiddenlayers <- if(input$radiocal==6 | input$radiocal==7){
+            as.numeric(input$neuralhiddenlayers)
+        } else if(input$radiocal!=6 | input$radiocal!=7){
+            as.numeric(1)
+        }
+        
+        neuralhiddenunits <- if(input$radiocal==6 | input$radiocal==7){
+            paste0(input$neuralhiddenunits[[1]], "-", input$neuralhiddenunits[[2]])
+        } else if(input$radiocal!=6 | input$radiocal!=7){
+            paste0(1, "-", 3)
+        }
+        
+        neuralweightdecay <- if(input$radiocal==6 | input$radiocal==7){
+            paste0(input$neuralweightdecay[[1]], "-", input$neuralweightdecay[[2]])
+        } else if(input$radiocal!=6 | input$radiocal!=7){
+            paste0(0.1, "-", 0.5)
+        }
+        
+        neuralmaxiterations <- if(input$radiocal==6 | input$radiocal==7){
+            as.numeric(input$neuralmaxiterations)
+        } else if(input$radiocal!=6 | input$radiocal!=7){
+            as.numeric(1000)
+        }
+        
+        cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max, foresttry, forestmetric, foresttrain, forestnumber, foresttrees, neuralhiddenlayers, neuralhiddenunits, neuralweightdecay, neuralmaxiterations, stringsAsFactors=FALSE)
+        colnames(cal.table) <- c("CalType", "NormType", "Min", "Max", "ForestTry", "ForestMetric", "ForestTC", "ForestNumber", "ForestTrees", "NeuralHL", "NeuralHU", "NeuralWD", "NeuralMI")
         
         slope.corrections <- input$slope_vars
         intercept.corrections <- input$intercept_vars
