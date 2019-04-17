@@ -28,7 +28,7 @@ tabPanel("Spectrum",
 div(class="outer",
 headerPanel("FTIR Spectrum Viewer"),
 sidebarLayout(
-sidebarPanel(
+sidebarPanel(width=3,
 
 #tags$style(type="text/css",
 #".shiny-output-error { visibility: hidden; }",
@@ -138,7 +138,7 @@ div(class="outer",
 
 fluidRow(
 sidebarLayout(
-sidebarPanel(
+sidebarPanel(width=3,
 
 actionButton('resethotablewave', "Reset"),
 actionButton('linecommitwave', "Add Wavenumbers"),
@@ -277,7 +277,9 @@ dblclick = dblclickOpts(id="plot_cal_dblclick"),
 brush = brushOpts(id = "plot_cal_brush", resetOnNew = TRUE),
 hover = hoverOpts("plot_hovercal", delay = 100, delayType = "debounce")),
 uiOutput("hover_infocal")),
-actionButton("cropcal", "Zoom")),
+actionButton("cropcal", "Zoom"),
+actionButton("zerocal", "Zero")
+),
 column(width=12,
 div(
 style = "position:relative",
@@ -286,7 +288,8 @@ dblclick = "plot_val_dblclick",
 brush = brushOpts(id = "plot_val_brush", resetOnNew = TRUE),
 hover = hoverOpts("plot_hoverval", delay = 100, delayType = "debounce")),
 uiOutput("hover_infoval")),
-actionButton("cropval", "Zoom")
+actionButton("cropval", "Zoom"),
+actionButton("zeroval", "Zero")
 )
 ),
 tags$hr(),
@@ -307,7 +310,8 @@ dblclick = "plot_cal_dblclick_random",
 brush = brushOpts(id = "plot_cal_brush_random", resetOnNew = TRUE),
 hover = hoverOpts("plot_hovercal_random", delay = 100, delayType = "debounce")),
 uiOutput("hover_infocal_random")),
-actionButton("cropcalrandom", "Zoom")
+actionButton("cropcalrandom", "Zoom"),
+actionButton("zerocalrandom", "Zero")
 ),
 column(width=12,
 div(
@@ -317,7 +321,8 @@ dblclick = "plot_val_dblclick_random",
 brush = brushOpts(id = "plot_val_brush_random", resetOnNew = TRUE),
 hover = hoverOpts("plot_hoverval_random", delay = 100, delayType = "debounce")),
 uiOutput("hover_infoval_random")),
-actionButton("cropvalrandom", "Zoom")
+actionButton("cropvalrandom", "Zoom"),
+actionButton("zerovalrandom", "Zero")
 )),
 tags$hr(),
 sliderInput('percentrandom', "Randomize", min=.01, max=.99, value=.33),

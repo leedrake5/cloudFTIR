@@ -3630,6 +3630,22 @@ content = function(file) {
         }
     })
     
+    observeEvent(input$zerocal, {
+        predict.frame <- if(calType()==1){
+            predictFrame()
+        } else if(calType()==2){
+            predictFrame()
+        } else if(calType()==3) {
+            valFrame()
+        } else if(calType()==5) {
+            valFrame()
+        }
+        
+        rangescalcurve$x <- c(0, max(predict.frame$AmplitudeNorm))
+        rangescalcurve$y <- c(0, max(predict.frame$Concentration))
+    })
+    
+    
     output$calcurveplots <- renderPlot({
         calCurvePlot()
     })
@@ -3688,6 +3704,15 @@ content = function(file) {
             rangesvalcurve$y <- NULL
         }
     })
+    
+    observeEvent(input$zeroval, {
+        predict.frame <- valFrame()
+        
+        
+        rangesvalcurve$x <- c(0, max(predict.frame$Prediction))
+        rangesvalcurve$y <- c(0, max(predict.frame$Concentration))
+    })
+    
     
     
     output$valcurveplots <- renderPlot({
@@ -4288,6 +4313,22 @@ content = function(file) {
         }
     })
     
+    observeEvent(input$zerocalrandom, {
+        predict.frame <- if(calType()==1){
+            calCurveFrameRandomized()
+        } else if(calType()==2){
+            calCurveFrameRandomized()
+        } else if(calType()==3) {
+            valFrameRandomizedRev()
+        } else if(calType()==5) {
+            valFrameRandomizedRev()
+        }
+        
+        rangescalcurverandom$x <- c(0, max(predict.frame$AmplitudeNorm))
+        rangescalcurverandom$y <- c(0, max(predict.frame$Concentration))
+    })
+    
+    
     
     
     output$calcurveplotsrandom <- renderPlot({
@@ -4342,6 +4383,14 @@ content = function(file) {
         }
     })
     
+    observeEvent(input$zerovalrandom, {
+        predict.frame <- valFrameRandomizedRev()
+        
+        
+        rangesvalcurverandom$x <- c(0, max(predict.frame$Prediction))
+        rangesvalcurverandom$y <- c(0, max(predict.frame$Concentration))
+    })
+    
     output$valcurveplotsrandom <- renderPlot({
         valCurvePlotRandom()
     })
@@ -4357,7 +4406,7 @@ content = function(file) {
     output$downloadcloudplotrandomized <- downloadHandler(
     filename = function() { paste(paste(c(input$projectname, "_", input$calcurveline), collapse=''), '.tiff',  sep='') },
     content = function(file) {
-        ggsave(file,calPlotDownloadRandomized(), device="tiff", compression="lzw", type="cairo", dpi=300, width=plotDimensions()[1], height=plotDimensions()[2])
+        ggsave(file,calPlotDownloadRandomized(), device="tiff", dpi=300, width=plotDimensions()[1], height=plotDimensions()[2])
     }
     )
     
