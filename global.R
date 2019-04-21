@@ -1,4 +1,4 @@
-list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "broom", "shinyjs", "gridExtra", "dtplyr", "formattable", "XML", "corrplot", "scales", "rmarkdown", "markdown", "peakPick", "shinyWidgets", "data.table", "baseline", "pls", "prospectr", "doSNOW", "parallel", "caret", "wavelets", "hexView", "GSIF", "gstat", "nnet", "neuralnet", "grid", "gridExtra", "compiler")
+list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "broom", "shinyjs", "gridExtra", "dtplyr", "formattable", "XML", "corrplot", "scales", "rmarkdown", "markdown", "peakPick", "shinyWidgets", "data.table", "baseline", "pls", "prospectr", "doSNOW", "parallel", "caret", "wavelets", "hexView", "GSIF", "gstat", "nnet", "neuralnet", "grid", "gridExtra", "compiler", "xgboost")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
@@ -25,6 +25,7 @@ library(data.table)
 library(compiler)
 library(nnet)
 library(neuralnet)
+library(xgboost)
 library(gridExtra)
 library(grid)
 
@@ -1558,6 +1559,10 @@ forestTryUI <- function(radiocal=3, neuralhiddenlayers=1, selection, maxsample){
         NULL
     } else if(radiocal==7 && neuralhiddenlayers > 1){
         sliderInput("foresttry", label="Sampling", min=2, max=maxsample-2, value=selection)
+    } else if(radiocal==8){
+        NULL
+    } else if(radiocal==9){
+        NULL
     }
 }
 
@@ -1575,6 +1580,10 @@ forestMetricUI <- function(radiocal, selection){
     } else if(radiocal==6){
         selectInput("forestmetric", label="Metric", choices=c("Root Mean Square Error"="RMSE", "R2"="Rsquared", "Logarithmic Loss"="logLoss"), selected=selection)
     } else if(radiocal==7){
+        selectInput("forestmetric", label="Metric", choices=c("Root Mean Square Error"="RMSE", "R2"="Rsquared", "Logarithmic Loss"="logLoss"), selected=selection)
+    } else if(radiocal==8){
+        selectInput("forestmetric", label="Metric", choices=c("Root Mean Square Error"="RMSE", "R2"="Rsquared", "Logarithmic Loss"="logLoss"), selected=selection)
+    } else if(radiocal==9){
         selectInput("forestmetric", label="Metric", choices=c("Root Mean Square Error"="RMSE", "R2"="Rsquared", "Logarithmic Loss"="logLoss"), selected=selection)
     }
 }
@@ -1594,6 +1603,10 @@ forestTrainUI <- function(radiocal, selection){
         selectInput("foresttrain", label="Train Control", choices=c("k-fold Cross Validation"="cv", "Bootstrap"="boot", "0.632 Bootstrap"="boot632", "Optimism Bootstrap"="optimism_boot", "Repeated k-fold Cross Validation"="repeatedcv", "Leave One Out Cross Validation"="LOOCV"), selected=selection)
     } else if(radiocal==7){
         selectInput("foresttrain", label="Train Control", choices=c("k-fold Cross Validation"="cv", "Bootstrap"="boot", "0.632 Bootstrap"="boot632", "Optimism Bootstrap"="optimism_boot", "Repeated k-fold Cross Validation"="repeatedcv", "Leave One Out Cross Validation"="LOOCV"), selected=selection)
+    } else if(radiocal==8){
+        selectInput("foresttrain", label="Train Control", choices=c("k-fold Cross Validation"="cv", "Bootstrap"="boot", "0.632 Bootstrap"="boot632", "Optimism Bootstrap"="optimism_boot", "Repeated k-fold Cross Validation"="repeatedcv", "Leave One Out Cross Validation"="LOOCV"), selected=selection)
+    } else if(radiocal==9){
+        selectInput("foresttrain", label="Train Control", choices=c("k-fold Cross Validation"="cv", "Bootstrap"="boot", "0.632 Bootstrap"="boot632", "Optimism Bootstrap"="optimism_boot", "Repeated k-fold Cross Validation"="repeatedcv", "Leave One Out Cross Validation"="LOOCV"), selected=selection)
     }
 }
 
@@ -1611,6 +1624,10 @@ forestNumberUI <- function(radiocal, selection){
     } else if(radiocal==6){
         sliderInput("forestnumber", label="Iterations", min=5, max=500, value=selection)
     } else if(radiocal==7){
+        sliderInput("forestnumber", label="Iterations", min=5, max=500, value=selection)
+    } else if(radiocal==8){
+        sliderInput("forestnumber", label="Iterations", min=5, max=500, value=selection)
+    } else if(radiocal==9){
         sliderInput("forestnumber", label="Iterations", min=5, max=500, value=selection)
     }
 }
@@ -1630,6 +1647,10 @@ forestTreesUI <- function(radiocal, selection){
         NULL
     } else if(radiocal==7){
         NULL
+    } else if(radiocal==8){
+        sliderInput("foresttrees", label="Trees", min=50, max=2000, value=selection)
+    } else if(radiocal==9){
+        sliderInput("foresttrees", label="Trees", min=50, max=2000, value=selection)
     }
 }
 
@@ -1648,6 +1669,10 @@ neuralHiddenLayersUI <- function(radiocal, selection){
         sliderInput("neuralhiddenlayers", label="Hidden Layers", min=1, max=3, value=selection)
     } else if(radiocal==7){
         sliderInput("neuralhiddenlayers", label="Hidden Layers", min=1, max=3, value=selection)
+    } else if(radiocal==8){
+        NULL
+    } else if(radiocal==9){
+        NULL
     }
 }
 
@@ -1666,10 +1691,14 @@ neuralHiddenUnitsUi <- function(radiocal, selection){
         sliderInput("neuralhiddenunits", label="Hidden Units", min=1, max=10, value=selection)
     } else if(radiocal==7){
         sliderInput("neuralhiddenunits", label="Hidden Units", min=1, max=10, value=selection)
+    } else if(radiocal==8){
+        NULL
+    } else if(radiocal==9){
+        NULL
     }
 }
 
-neuralWeightDecayUI <- function(radiocal, selection, neuralhiddenlayers=1){
+neuralWeightDecayUI <- function(radiocal, selection, neuralhiddenlayers){
     if(radiocal==1){
         NULL
     } else if(radiocal==2){
@@ -1688,10 +1717,14 @@ neuralWeightDecayUI <- function(radiocal, selection, neuralhiddenlayers=1){
         sliderInput("neuralweightdecay", label="Weight Decay", min=0.1, max=0.7, step=0.1, value=selection)
     } else if(radiocal==7 && neuralhiddenlayers > 1){
         NULL
+    } else if(radiocal==8){
+        NULL
+    } else if(radiocal==9){
+        NULL
     }
 }
 
-neuralMaxIterationsUI <- function(radiocal, selection, neuralhiddenlayers=1){
+neuralMaxIterationsUI <- function(radiocal, selection, neuralhiddenlayers){
     if(radiocal==1){
         NULL
     } else if(radiocal==2){
@@ -1710,8 +1743,151 @@ neuralMaxIterationsUI <- function(radiocal, selection, neuralhiddenlayers=1){
         sliderInput("neuralmaxiterations", label="Max Iterations", min=50, max=2000, value=selection)
     } else if(radiocal==7 && neuralhiddenlayers > 1){
         NULL
+    } else if(radiocal==8){
+        NULL
+    } else if(radiocal==9){
+        NULL
     }
 }
+
+
+treeDepthUI <- function(radiocal, selection){
+    if(radiocal==1){
+        NULL
+    } else if(radiocal==2){
+        NULL
+    } else if(radiocal==3){
+        NULL
+    } else if(radiocal==4){
+        NULL
+    }  else if(radiocal==5){
+        NULL
+    } else if(radiocal==6){
+        NULL
+    } else if(radiocal==7){
+        NULL
+    } else if(radiocal==8){
+        sliderInput("treedepth", label="Tree Depth", min=5, max=50, step=5, value=selection)
+    } else if(radiocal==9){
+        sliderInput("treedepth", label="Tree Depth", min=5, max=50, step=5, value=selection)
+        
+    }
+}
+
+xgbEtaUI <- function(radiocal, selection){
+    if(radiocal==1){
+        NULL
+    } else if(radiocal==2){
+        NULL
+    } else if(radiocal==3){
+        NULL
+    } else if(radiocal==4){
+        NULL
+    }  else if(radiocal==5){
+        NULL
+    } else if(radiocal==6){
+        NULL
+    } else if(radiocal==7){
+        NULL
+    } else if(radiocal==8){
+        sliderInput("xgbeta", label="Eta", min=0.1, max=0.9, step=0.1, value=selection)
+    } else if(radiocal==9){
+        sliderInput("xgbeta", label="Eta", min=0.1, max=0.9, step=0.1, value=selection)
+        
+    }
+}
+
+xgbGammaUI <- function(radiocal, selection){
+    if(radiocal==1){
+        NULL
+    } else if(radiocal==2){
+        NULL
+    } else if(radiocal==3){
+        NULL
+    } else if(radiocal==4){
+        NULL
+    }  else if(radiocal==5){
+        NULL
+    } else if(radiocal==6){
+        NULL
+    } else if(radiocal==7){
+        NULL
+    }else if(radiocal==8){
+        sliderInput("xgbgamma", label="Gamma", min=0, max=0.9, step=0.1, value=selection)
+    } else if(radiocal==9){
+        sliderInput("xgbgamma", label="Gamma", min=0, max=0.9, step=0.1, value=selection)
+        
+    }
+}
+
+xgbSubSampleUI <- function(radiocal, selection){
+    if(radiocal==1){
+        NULL
+    } else if(radiocal==2){
+        NULL
+    } else if(radiocal==3){
+        NULL
+    } else if(radiocal==4){
+        NULL
+    }  else if(radiocal==5){
+        NULL
+    } else if(radiocal==6){
+        NULL
+    } else if(radiocal==7){
+        NULL
+    } else if(radiocal==8){
+        sliderInput("xgbsubsample", label="Sub Sample", min=0.1, max=1, step=0.1, value=selection)
+    } else if(radiocal==9){
+        sliderInput("xgbsubsample", label="Sub Sample", min=0.1, max=1, step=0.1, value=selection)
+        
+    }
+}
+
+xgbColSampleUI <- function(radiocal, selection){
+    if(radiocal==1){
+        NULL
+    } else if(radiocal==2){
+        NULL
+    } else if(radiocal==3){
+        NULL
+    } else if(radiocal==4){
+        NULL
+    }  else if(radiocal==5){
+        NULL
+    } else if(radiocal==6){
+        NULL
+    } else if(radiocal==7){
+        NULL
+    } else if(radiocal==8){
+        sliderInput("xgbcolsample", label="Col Sample", min=0.1, max=1, step=0.1, value=selection)
+    } else if(radiocal==9){
+        sliderInput("xgbcolsample", label="Col Sample", min=0.1, max=1, step=0.1, value=selection)
+        
+    }
+}
+
+xgbMinChildUI <- function(radiocal, selection){
+    if(radiocal==1){
+        NULL
+    } else if(radiocal==2){
+        NULL
+    } else if(radiocal==3){
+        NULL
+    } else if(radiocal==4){
+        NULL
+    }  else if(radiocal==5){
+        NULL
+    } else if(radiocal==6){
+        NULL
+    } else if(radiocal==7){
+        NULL
+    } else if(radiocal==8){
+        sliderInput("xgbminchild", label="Min Child", min=0, max=15, step=1, value=selection)
+    } else if(radiocal==9){
+        sliderInput("xgbminchild", label="Min Child", min=0, max=15, step=1, value=selection)
+    }
+}
+
 
 
 ###Neural Net Plots

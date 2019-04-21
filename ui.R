@@ -252,6 +252,18 @@ uiOutput('neuralweightdecayui'),
 
 uiOutput('neuralmaxiterationsui'),
 
+uiOutput('treedepthui'),
+
+uiOutput('xgbetaui'),
+
+uiOutput('xgbgammaui'),
+
+uiOutput('xgbsubsampleui'),
+
+uiOutput('xgbcolsampleui'),
+
+uiOutput('xgbminchildui'),
+
 uiOutput('normTypeInput'),
 
 uiOutput('comptonMinInput'),

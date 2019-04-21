@@ -1511,9 +1511,35 @@ shinyServer(function(input, output, session) {
         neuralhiddenunits <- paste0(1, "-", 4)
         neuralweightdecay <- paste0(0.1, "-", 0.5)
         neuralmaxiterations <- as.numeric(1000)
+        treedepth <- as.character("5-15")
+        xgbeta <- as.character("0.1-0.3")
+        xgbgamma <- as.character("0-0.1")
+        xgbsubsample <- as.character("0.4-0.6")
+        xgbcolsample <- as.character("0.4-0.6")
+        xgbminchild <- as.numeric(1)
         
-        cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max, foresttry, forestmetric, foresttrain, forestnumber, foresttrees, neuralhiddenlayers, neuralhiddenunits, neuralweightdecay, neuralmaxiterations, stringsAsFactors=FALSE)
-        colnames(cal.table) <- c("CalType", "NormType", "Min", "Max", "ForestTry", "ForestMetric", "ForestTC", "ForestNumber", "ForestTrees", "NeuralHL", "NeuralHU", "NeuralWD", "NeuralMI")
+        
+        cal.table <- data.frame(
+            CalType=cal.condition,
+            NormType=norm.condition,
+            Min=norm.min,
+            Max=norm.max,
+            ForestTry=foresttry,
+            ForestMetric=forestmetric,
+            ForestTC=foresttrain,
+            ForestNumber=forestnumber,
+            ForestTrees=foresttrees,
+            NeuralHL=neuralhiddenlayers,
+            NeuralHU=neuralhiddenunits,
+            NeuralWD=neuralweightdecay,
+            NeuralMI=neuralmaxiterations,
+            TreeDepth=treedepth,
+            xgbEta=xgbeta,
+            xgbGamma=xgbgamma,
+            xgbSubSample=xgbsubsample,
+            xgbColSample=xgbcolsample,
+            xgbMinChild=xgbminchild,
+            stringsAsFactors=FALSE)
         
         slope.corrections <- NULL
         intercept.corrections <- NULL
@@ -1582,6 +1608,30 @@ shinyServer(function(input, output, session) {
     
     observeEvent(input$neuralmaxiterations, {
         calConditons[["CalTable"]]$NeuralMI <- as.numeric(input$neuralmaxiterations)
+    })
+    
+    observeEvent(input$treedepth, {
+        calConditons[["CalTable"]]$TreeDepth <- paste0(input$treedeepth[[1]], "-", input$treedepth[[2]])
+    })
+    
+    observeEvent(input$xgbeta, {
+        calConditons[["CalTable"]]$xgbEta <- paste0(input$xgbeta[[1]], "-", input$xgbeta[[2]])
+    })
+    
+    observeEvent(input$xgbgamma, {
+        calConditons[["CalTable"]]$xgbGamma <- paste0(input$xgbgamma[[1]], "-", input$xgbgamma[[2]])
+    })
+    
+    observeEvent(input$xgbsubsample, {
+        calConditons[["CalTable"]]$xgbSubSample <- paste0(input$xgbsubsample[[1]], "-", input$xgbsubsample[[2]])
+    })
+    
+    observeEvent(input$xgbcolsample, {
+        calConditons[["CalTable"]]$xgbColSample <- paste0(input$xgbcolsample[[1]], "-", input$xgbcolsample[[2]])
+    })
+    
+    observeEvent(input$xgbminchild, {
+        calConditons[["CalTable"]]$xgbMinChild <- as.numeric(input$xgbminchild)
     })
     
     
@@ -2789,6 +2839,120 @@ content = function(file) {
         
     })
     
+    xgboostIntensityParameters <- reactiveValues()
+    observeEvent(input$mclrun, {
+        xgboostIntensityParameters$foresttrees <- input$foresttrees
+        xgboostIntensityParameters$forestmetric <- input$forestmetric
+        xgboostIntensityParameters$foresttrain <- input$foresttrain
+        xgboostIntensityParameters$forestnumber <- input$forestnumber
+        xgboostIntensityParameters$treedepth <- input$treedepth
+        xgboostIntensityParameters$xgbeta <- input$xgbeta
+        xgboostIntensityParameters$xgbgamma <- input$xgbgamma
+        xgboostIntensityParameters$xgbsubsample <- input$xgbsubsample
+        xgboostIntensityParameters$xgbcolsample <- input$xgbcolsample
+        xgboostIntensityParameters$xgbminchild <- input$xgbminchild
+    })
+    
+    xgboostIntensityModel <- reactive({
+        
+        data <- predictFrameForest()
+        
+        tree.depth.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$treedepth), "-")))
+        xgbeta.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$xgbeta), "-")))
+        xgbgamma.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$xgbgamma), "-")))
+        xgbsubsample.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$xgbsubsample), "-")))
+        xgbcolsample.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$xgbcolsample), "-")))
+        
+        
+        xgbGrid <- expand.grid(
+        nrounds = seq(50, xgboostIntensityParameters$foresttrees, by=xgboostIntensityParameters$foresttrees/5),
+        max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5),
+        eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1),
+        gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1),
+        colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1),
+        subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1),
+        min_child_weight = xgboostIntensityParameters$xgbminchild
+        )
+        
+        tune_control <- caret::trainControl(
+        method = xgboostIntensityParameters$foresttrain,
+        number = xgboostIntensityParameters$forestnumber,
+        verboseIter = TRUE,
+        allowParallel = TRUE
+        )
+        
+        cl <- if(get_os()=="windows"){
+            parallel::makePSOCKcluster(as.numeric(my.cores))
+        } else if(get_os()!="windows"){
+            parallel::makeForkCluster(as.numeric(my.cores))
+        }
+        registerDoParallel(cl)
+        
+        xgb_model <- caret::train(Concentration~., data=data[vals$keeprows,, drop=FALSE], trControl = tune_control, tuneGrid = xgbGrid, metric=xgboostIntensityParameters$forestmetric, method = "xgbTree", na.action=na.omit)
+        
+        
+        stopCluster(cl)
+        xgb_model
+        
+    })
+    
+    xgboostSpectraParameters <- reactiveValues()
+    observeEvent(input$mclrun, {
+        xgboostSpectraParameters$foresttrees <- input$foresttrees
+        xgboostSpectraParameters$forestmetric <- input$forestmetric
+        xgboostSpectraParameters$foresttrain <- input$foresttrain
+        xgboostSpectraParameters$forestnumber <- input$forestnumber
+        xgboostSpectraParameters$treedepth <- input$treedepth
+        xgboostSpectraParameters$xgbeta <- input$xgbeta
+        xgboostSpectraParameters$xgbgamma <- input$xgbgamma
+        xgboostSpectraParameters$xgbsubsample <- input$xgbsubsample
+        xgboostSpectraParameters$xgbcolsample <- input$xgbcolsample
+        xgboostSpectraParameters$xgbminchild <- input$xgbminchild
+    })
+    
+    xgboostSpectraModel <- reactive({
+        
+        data <- rainforestData()
+        
+        tree.depth.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$treedepth), "-")))
+        xgbeta.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$xgbeta), "-")))
+        xgbgamma.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$xgbgamma), "-")))
+        xgbsubsample.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$xgbsubsample), "-")))
+        xgbcolsample.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$xgbcolsample), "-")))
+        
+        
+        xgbGrid <- expand.grid(
+        nrounds = seq(50, xgboostIntensityParameters$foresttrees, by=xgboostIntensityParameters$foresttrees/5),
+        max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5),
+        eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1),
+        gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1),
+        colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1),
+        subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1),
+        min_child_weight = xgboostIntensityParameters$xgbminchild
+        )
+        
+        tune_control <- caret::trainControl(
+        method = xgboostIntensityParameters$foresttrain,
+        number = xgboostIntensityParameters$forestnumber,
+        verboseIter = TRUE,
+        allowParallel = TRUE
+        )
+        
+        cl <- if(get_os()=="windows"){
+            parallel::makePSOCKcluster(as.numeric(my.cores))
+        } else if(get_os()!="windows"){
+            parallel::makeForkCluster(as.numeric(my.cores))
+        }
+        registerDoParallel(cl)
+        
+        xgb_model <- caret::train(Concentration~., data=data[vals$keeprows,, drop=FALSE], trControl = tune_control, tuneGrid = xgbGrid, metric=xgboostIntensityParameters$forestmetric, method = "xgbTree", na.action=na.omit)
+        
+        
+        stopCluster(cl)
+        xgb_model
+        
+    })
+    
     
     
     bestCalTypeFrame <- reactive({
@@ -2907,6 +3071,8 @@ content = function(file) {
             calList[[input$calcurveline]][[1]]$CalTable$ForestTry
         } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["ForestTry"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE && !"ForestTry" %in% names(calList[[input$calcurveline]][[1]]$CalTable)){
+            calConditons[["CalTable"]][["ForestTry"]]
         }
         
     })
@@ -2925,7 +3091,10 @@ content = function(file) {
             calList[[input$calcurveline]][[1]]$CalTable$ForestMetric
         } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["ForestMetric"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE && !"ForestMetric" %in% names(calList[[input$calcurveline]][[1]]$CalTable)){
+            calConditons[["CalTable"]][["ForestMetric"]]
         }
+        
         
     })
     
@@ -2941,6 +3110,8 @@ content = function(file) {
         } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE){
             calList[[input$calcurveline]][[1]]$CalTable$ForestTC
         } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
+            calConditons[["CalTable"]][["ForestTC"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE && !"ForestTC" %in% names(calList[[input$calcurveline]][[1]]$CalTable)){
             calConditons[["CalTable"]][["ForestTC"]]
         }
         
@@ -2960,6 +3131,8 @@ content = function(file) {
             calList[[input$calcurveline]][[1]]$CalTable$ForestNumber
         } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["ForestNumber"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE && !"ForestNumber" %in% names(calList[[input$calcurveline]][[1]]$CalTable)){
+            calConditons[["CalTable"]][["ForestNumber"]]
         }
         
     })
@@ -2977,6 +3150,8 @@ content = function(file) {
         } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE){
             calList[[input$calcurveline]][[1]]$CalTable$ForestTrees
         } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
+            calConditons[["CalTable"]][["ForestTrees"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE && !"ForestTrees" %in% names(calList[[input$calcurveline]][[1]]$CalTable)){
             calConditons[["CalTable"]][["ForestTrees"]]
         }
         
@@ -3000,6 +3175,8 @@ content = function(file) {
         } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHL"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHL"]])==TRUE){
             hold <- calConditons[["CalTable"]][["NeuralHL"]]
             as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE && !"NeuralHL" %in% names(calList[[input$calcurveline]][[1]]$CalTable)){
+            calConditons[["CalTable"]][["NeuralHL"]]
         }
         
     })
@@ -3022,6 +3199,8 @@ content = function(file) {
         } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHU"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralHU"]])==TRUE){
             hold <- calConditons[["CalTable"]][["NeuralHU"]]
             as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE && !"NeuralHU" %in% names(calList[[input$calcurveline]][[1]]$CalTable)){
+            as.numeric(unlist(strsplit(as.character(calConditons[["CalTable"]][["NeuralHU"]]))))
         }
         
     })
@@ -3044,6 +3223,8 @@ content = function(file) {
         } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralWD"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["NeuralWD"]])==TRUE){
             hold <- calConditons[["CalTable"]][["NeuralWD"]]
             as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE && !"NeuralWD" %in% names(calList[[input$calcurveline]][[1]]$CalTable)){
+            as.numeric(unlist(strsplit(as.character(calConditons[["CalTable"]][["NeuralWD"]]))))
         }
         
     })
@@ -3061,6 +3242,147 @@ content = function(file) {
             calList[[input$calcurveline]][[1]]$CalTable$NeuralMI
         } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
             calConditons[["CalTable"]][["NeuralMI"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE && !"NeuralMI" %in% names(calList[[input$calcurveline]][[1]]$CalTable)){
+            calConditons[["CalTable"]][["NeuralMI"]]
+        }
+        
+    })
+    
+    calTreeDepthSelectionpre <- reactive({
+        
+        
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["TreeDepth"]])==TRUE){
+            hold <- calConditons[["CalTable"]][["TreeDepth"]]
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["TreeDepth"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["TreeDepth"]])==FALSE){
+            hold <- calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$TreeDepth
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["TreeDepth"]])==FALSE){
+            hold <- calList[[input$calcurveline]][[1]]$CalTable$TreeDepth
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["TreeDepth"]])==FALSE){
+            hold <- calList[[input$calcurveline]][[1]]$CalTable$TreeDepth
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["TreeDepth"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["TreeDepth"]])==TRUE){
+            hold <- calConditons[["CalTable"]][["TreeDepth"]]
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE && !"TreeDepth" %in% names(calList[[input$calcurveline]][[1]]$CalTable)){
+            as.numeric(unlist(strsplit(as.character(calConditons[["CalTable"]][["TreeDepth"]]))))
+        }
+        
+    })
+    
+    calXGBEtaSelectionpre <- reactive({
+        
+        
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbEta"]])==TRUE){
+            hold <- calConditons[["CalTable"]][["xgbEta"]]
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbEta"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["xgbEta"]])==FALSE){
+            hold <- calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$xgbEta
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbEta"]])==FALSE){
+            hold <- calList[[input$calcurveline]][[1]]$CalTable$xgbEta
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbEta"]])==FALSE){
+            hold <- calList[[input$calcurveline]][[1]]$CalTable$xgbEta
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbEta"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["xgbEta"]])==TRUE){
+            hold <- calConditons[["CalTable"]][["xgbEta"]]
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE && !"xgbEta" %in% names(calList[[input$calcurveline]][[1]]$CalTable)){
+            as.numeric(unlist(strsplit(as.character(calConditons[["CalTable"]][["xgbEta"]]))))
+        }
+        
+    })
+    
+    calXGBGammaSelectionpre <- reactive({
+        
+        
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbGamma"]])==TRUE){
+            hold <- calConditons[["CalTable"]][["xgbGamma"]]
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbGamma"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["xgbGamma"]])==FALSE){
+            hold <- calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$xgbGamma
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbGamma"]])==FALSE){
+            hold <- calList[[input$calcurveline]][[1]]$CalTable$xgbGamma
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbGamma"]])==FALSE){
+            hold <- calList[[input$calcurveline]][[1]]$CalTable$xgbGamma
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbGamma"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["xgbGamma"]])==TRUE){
+            hold <- calConditons[["CalTable"]][["xgbGamma"]]
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE && !"xgbGamma" %in% names(calList[[input$calcurveline]][[1]]$CalTable)){
+            as.numeric(unlist(strsplit(as.character(calConditons[["CalTable"]][["xgbGamma"]]))))
+        }
+        
+    })
+    
+    calXGBSubSampleSelectionpre <- reactive({
+        
+        
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbSubSample"]])==TRUE){
+            hold <- calConditons[["CalTable"]][["xgbSubSample"]]
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbSubSample"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["xgbSubSample"]])==FALSE){
+            hold <- calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$xgbSubSample
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbSubSample"]])==FALSE){
+            hold <- calList[[input$calcurveline]][[1]]$CalTable$xgbSubSample
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbSubSample"]])==FALSE){
+            hold <- calList[[input$calcurveline]][[1]]$CalTable$xgbSubSample
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbSubSample"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["xgbSubSample"]])==TRUE){
+            hold <- calConditons[["CalTable"]][["xgbSubSample"]]
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE && !"xgbSubSample" %in% names(calList[[input$calcurveline]][[1]]$CalTable)){
+            as.numeric(unlist(strsplit(as.character(calConditons[["CalTable"]][["xgbSubSample"]]))))
+        }
+        
+    })
+    
+    calXGBColSampleSelectionpre <- reactive({
+        
+        
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbColSample"]])==TRUE){
+            hold <- calConditons[["CalTable"]][["xgbColSample"]]
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbColSample"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["xgbColSample"]])==FALSE){
+            hold <- calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$xgbColSample
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbColSample"]])==FALSE){
+            hold <- calList[[input$calcurveline]][[1]]$CalTable$xgbColSample
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbColSample"]])==FALSE){
+            hold <- calList[[input$calcurveline]][[1]]$CalTable$xgbColSample
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]][[1]][["CalTable"]][["xgbColSample"]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]][[1]][["CalTable"]][["xgbColSample"]])==TRUE){
+            hold <- calConditons[["CalTable"]][["xgbColSample"]]
+            as.numeric(unlist(strsplit(as.character(hold), "-")))
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE && !"xgbColSample" %in% names(calList[[input$calcurveline]][[1]]$CalTable)){
+            as.numeric(unlist(strsplit(as.character(calConditons[["CalTable"]][["xgbColSample"]]))))
+        }
+        
+    })
+    
+    calXGBMinChildSelectionpre <- reactive({
+        
+        
+        if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==TRUE){
+            calConditons[["CalTable"]][["xgbMinChild"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==FALSE){
+            calFileContents()$calList[[input$calcurveline]][[1]]$CalTable$xgbMinChild
+        } else if(input$usecalfile==FALSE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$xgbMinChild
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE){
+            calList[[input$calcurveline]][[1]]$CalTable$xgbMinChild
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==TRUE && is.null(calFileContents()$calList[[input$calcurveline]])==TRUE){
+            calConditons[["CalTable"]][["xgbMinChild"]]
+        } else if(input$usecalfile==TRUE && is.null(calList[[input$calcurveline]])==FALSE && "xgbMinChild" %in% names(calFileContents()$calList[[input$calcurveline]][[1]]$CalTable)==FALSE){
+            calConditons[["CalTable"]][["xgbMinChild"]]
         }
         
     })
@@ -3068,6 +3390,8 @@ content = function(file) {
     
     foresthold <- reactiveValues()
     neuralhold <- reactiveValues()
+    xgboosthold <- reactiveValues()
+
     
     
     observeEvent(input$calcurveline, {
@@ -3080,6 +3404,12 @@ content = function(file) {
         neuralhold$hiddenunits <- calHiddenUnitsSelectionpre()
         neuralhold$weightdecay <- calWeightDecaySelectionpre()
         neuralhold$maxiterations <- calMaxIterationsSelectionpre()
+        xgboosthold$treedepth <- calTreeDepthSelectionpre()
+        xgboosthold$xgbeta <- calXGBEtaSelectionpre()
+        xgboosthold$xgbgamma <- calXGBGammaSelectionpre()
+        xgboosthold$xgbsubsample <- calXGBSubSampleSelectionpre()
+        xgboosthold$xgbcolsample <- calXGBColSampleSelectionpre()
+        xgboosthold$xgbminchild <- calXGBMinChildSelectionpre()
     })
     
     
@@ -3127,6 +3457,30 @@ content = function(file) {
         neuralhold$maxiterations
     })
     
+    xgboostTreeDepthSelection <- reactive({
+        xgboosthold$treedepth
+    })
+    
+    xgboostEtaSelection <- reactive({
+        xgboosthold$xgbeta
+    })
+    
+    xgboostGammaSelection <- reactive({
+        xgboosthold$xgbgamma
+    })
+    
+    xgboostSubSampleSelection <- reactive({
+        xgboosthold$xgbsubsample
+    })
+    
+    xgboostColSampleSelection <- reactive({
+        xgboosthold$xgbcolsample
+    })
+    
+    xgboostMinChildSelection <- reactive({
+        xgboosthold$xgbminchild
+    })
+    
     
     output$mclrunui <- renderUI({
         
@@ -3143,6 +3497,10 @@ content = function(file) {
         } else if(input$radiocal==6){
             actionButton("mclrun", "Run Model")
         } else if(input$radiocal==7){
+            actionButton("mclrun", "Run Model")
+        } else if(input$radiocal==8){
+            actionButton("mclrun", "Run Model")
+        } else if(input$radiocal==9){
             actionButton("mclrun", "Run Model")
         }
         
@@ -3185,7 +3543,30 @@ content = function(file) {
     
     output$neuralmaxiterationsui <- renderUI({
         neuralMaxIterationsUI(radiocal=input$radiocal, selection=neuralMaxIterationsSelection(), neuralhiddenlayers=input$neuralhiddenlayers)
-        
+    })
+    
+    output$treedepthui <- renderUI({
+        treeDepthUI(radiocal=input$radiocal, selection=xgboostTreeDepthSelection())
+    })
+    
+    output$xgbetaui <- renderUI({
+        xgbEtaUI(radiocal=input$radiocal, selection=xgboostEtaSelection())
+    })
+    
+    output$xgbgammaui <- renderUI({
+        xgbGammaUI(radiocal=input$radiocal, selection=xgboostGammaSelection())
+    })
+    
+    output$xgbsubsampleui <- renderUI({
+        xgbSubSampleUI(radiocal=input$radiocal, selection=xgboostSubSampleSelection())
+    })
+    
+    output$xgbcolsampleui <- renderUI({
+        xgbColSampleUI(radiocal=input$radiocal, selection=xgboostColSampleSelection())
+    })
+    
+    output$xgbminchildui <- renderUI({
+        xgbMinChildUI(radiocal=input$radiocal, selection=xgboostMinChildSelection())
     })
     
     
@@ -3264,7 +3645,7 @@ content = function(file) {
     output$calTypeInput <- renderUI({
         
         selectInput("radiocal", label = "Calibration Curve",
-        choices = list("Linear" = 1, "Non-Linear" = 2, "Lucas-Tooth" = 3, "Forest" = 4, "Rainforest"=5, "Neural Network Intensities"=6, "Neural Network Spectra"=7),
+        choices = list("Linear" = 1, "Non-Linear" = 2, "Lucas-Tooth" = 3, "Forest" = 4, "Rainforest"=5, "Neural Network Intensities"=6, "Neural Network Spectra"=7, "XGBoost Intensities"=8, "XGBoost Spectra"=9),
         selected = calTypeSelection())
         
         
@@ -3306,6 +3687,10 @@ content = function(file) {
                 predictAmplitudeForest()
             } else if(input$radiocal==7){
                 rainforestAmplitude()
+            } else if(input$radiocal==8){
+                predictAmplitudeForest()
+            } else if(input$radiocal==9){
+                rainforestAmplitude()
             }
         
 
@@ -3328,6 +3713,10 @@ content = function(file) {
         } else if(input$radiocal==6){
             predictFrameForest()
         } else if(input$radiocal==7){
+            rainforestData()
+        } else if(input$radiocal==8){
+            predictFrameForest()
+        } else if(input$radiocal==9){
             rainforestData()
         }
         
@@ -3373,6 +3762,10 @@ content = function(file) {
             neuralNetworkIntensityModel()
         } else if(input$radiocal==7){
             neuralNetworkSpectraModel()
+        } else if(input$radiocal==8){
+            xgboostIntensityModel()
+        } else if(input$radiocal==9){
+            xgboostSpectraModel()
         }
         
     })
@@ -3458,7 +3851,7 @@ content = function(file) {
             
             
             val.frame <- data.frame(predict.frame$Concentration, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
-            colnames(val.frame) <- c("Concentration",  "Intensity", "Prediction")
+            colnames(val.frame) <- c("Concentration",  "AmplitudeNorm", "Prediction")
         }
         
         
@@ -3473,7 +3866,36 @@ content = function(file) {
             
             
             val.frame <- data.frame(predict.frame$Concentration, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
-            colnames(val.frame) <- c("Concentration",  "Intensity", "Prediction")
+            colnames(val.frame) <- c("Concentration",  "AmplitudeNorm", "Prediction")
+        }
+        
+        if (input$radiocal==8){
+            
+            
+            cal.est.conc.pred.luc <- predict(object=line.model, newdata=predict.amplitude)
+            #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
+            #cal.est.conc.luc <- cal.est.conc.tab$fit
+            #cal.est.conc.luc.up <- cal.est.conc.tab$upr
+            #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
+            
+            
+            val.frame <- data.frame(predict.frame$Concentration, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration",  "AmplitudeNorm", "Prediction")
+        }
+        
+        
+        if (input$radiocal==9){
+            
+            
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude)
+            #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
+            #cal.est.conc.luc <- cal.est.conc.tab$fit
+            #cal.est.conc.luc.up <- cal.est.conc.tab$upr
+            #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
+            
+            
+            val.frame <- data.frame(predict.frame$Concentration, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration",  "AmplitudeNorm", "Prediction")
         }
         
         
@@ -3505,6 +3927,10 @@ content = function(file) {
         } else if(input$radiocal==6){
             3
         } else if(input$radiocal==7){
+            5
+        } else if(input$radiocal==8){
+            3
+        } else if(input$radiocal==9){
             5
         }
         
@@ -3600,15 +4026,36 @@ content = function(file) {
         }
         
         if(input$radiocal==6){
-            
             calcurve.plot <- grobTree(plot.nnet(lineModel(),nid=T))
-            
         }
         
         if(input$radiocal==7){
-            
             calcurve.plot <- grobTree(plot.nnet(lineModel(),nid=T))
+        }
+        
+        if(input$radiocal==8){
+            calcurve.plot <- ggplot(data=val.frame[ vals$keeprows, , drop = FALSE], aes(AmplitudeNorm, Concentration)) +
+            theme_light() +
+            annotate("text", label=lm_eqn(lm(Concentration~AmplitudeNorm, val.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            geom_smooth() +
+            geom_point() +
+            geom_point(aes(AmplitudeNorm, Concentration), data = val.frame[!vals$keeprows, , drop = FALSE], shape = 21, fill = "red", color = "black", alpha = 0.25) +
+            scale_x_continuous(paste(element.name, norma)) +
+            scale_y_continuous(paste(element.name, conen)) +
+            coord_cartesian(xlim = rangescalcurve$x, ylim = rangescalcurve$y, expand = TRUE)
             
+        }
+        
+        if(input$radiocal==9){
+            calcurve.plot <- ggplot(data=val.frame[ vals$keeprows, , drop = FALSE], aes(AmplitudeNorm, Concentration)) +
+            theme_light() +
+            annotate("text", label=lm_eqn(lm(Concentration~AmplitudeNorm, val.frame[ vals$keeprows, , drop = FALSE])), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            geom_smooth() +
+            geom_point() +
+            geom_point(aes(AmplitudeNorm, Concentration), data = val.frame[!vals$keeprows, , drop = FALSE], shape = 21, fill = "red", color = "black", alpha = 0.25) +
+            scale_x_continuous(paste(element.name, norma)) +
+            scale_y_continuous(paste(element.name, conen)) +
+            coord_cartesian(xlim = rangescalcurve$x, ylim = rangescalcurve$y, expand = TRUE)
             
         }
         
@@ -3959,6 +4406,92 @@ content = function(file) {
         nn_model
     })
     
+    xgboostIntensityModelRandom <- reactive({
+        
+        data <- calCurveFrameRandomized()
+        
+        tree.depth.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$treedepth), "-")))
+        xgbeta.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$xgbeta), "-")))
+        xgbgamma.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$xgbgamma), "-")))
+        xgbsubsample.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$xgbsubsample), "-")))
+        xgbcolsample.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$xgbcolsample), "-")))
+        
+        
+        xgbGrid <- expand.grid(
+        nrounds = seq(50, xgboostIntensityParameters$foresttrees, by=xgboostIntensityParameters$foresttrees/5),
+        max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5),
+        eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1),
+        gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1),
+        colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1),
+        subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1),
+        min_child_weight = xgboostIntensityParameters$xgbminchild
+        )
+        
+        tune_control <- caret::trainControl(
+        method = xgboostIntensityParameters$foresttrain,
+        number = xgboostIntensityParameters$forestnumber,
+        verboseIter = TRUE,
+        allowParallel = TRUE
+        )
+        
+        cl <- if(get_os()=="windows"){
+            parallel::makePSOCKcluster(as.numeric(my.cores))
+        } else if(get_os()!="windows"){
+            parallel::makeForkCluster(as.numeric(my.cores))
+        }
+        registerDoParallel(cl)
+        
+        xgb_model <- caret::train(Concentration~., data=data[vals$keeprows,, drop=FALSE], trControl = tune_control, tuneGrid = xgbGrid, metric=xgboostIntensityParameters$forestmetric, method = "xgbTree", na.action=na.omit)
+        
+        
+        stopCluster(cl)
+        xgb_model
+        
+    })
+    
+    xgboostSpectraModelRandom <- reactive({
+        
+        data <- calCurveFrameRandomized()
+        
+        tree.depth.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$treedepth), "-")))
+        xgbeta.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$xgbeta), "-")))
+        xgbgamma.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$xgbgamma), "-")))
+        xgbsubsample.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$xgbsubsample), "-")))
+        xgbcolsample.vec <- as.numeric(unlist(strsplit(as.character(xgboostIntensityParameters$xgbcolsample), "-")))
+        
+        
+        xgbGrid <- expand.grid(
+        nrounds = seq(50, xgboostIntensityParameters$foresttrees, by=xgboostIntensityParameters$foresttrees/5),
+        max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5),
+        eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1),
+        gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1),
+        colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1),
+        subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1),
+        min_child_weight = xgboostIntensityParameters$xgbminchild
+        )
+        
+        tune_control <- caret::trainControl(
+        method = xgboostIntensityParameters$foresttrain,
+        number = xgboostIntensityParameters$forestnumber,
+        verboseIter = TRUE,
+        allowParallel = TRUE
+        )
+        
+        cl <- if(get_os()=="windows"){
+            parallel::makePSOCKcluster(as.numeric(my.cores))
+        } else if(get_os()!="windows"){
+            parallel::makeForkCluster(as.numeric(my.cores))
+        }
+        registerDoParallel(cl)
+        
+        xgb_model <- caret::train(Concentration~., data=data[vals$keeprows,, drop=FALSE], trControl = tune_control, tuneGrid = xgbGrid, metric=xgboostIntensityParameters$forestmetric, method = "xgbTree", na.action=na.omit)
+        
+        
+        stopCluster(cl)
+        xgb_model
+        
+    })
+    
     lineModelRandom <- reactive({
         
         if(input$radiocal==1){
@@ -3979,6 +4512,10 @@ content = function(file) {
             neuralNetworkSpectraShallowRandom()
         } else if(input$radiocal==7 && input$neuralhiddenlayers>1){
             neuralNetworkSpectraShallowRandom()
+        } else if(input$radiocal==8){
+            xgboostIntensityModelRandom()
+        } else if(input$radiocal==9){
+            xgboostSpectraModelRandom()
         }
         
     })
@@ -4056,31 +4593,64 @@ content = function(file) {
             colnames(val.frame) <- c("Concentration", "AmplitudeNorm", "Prediction")
         }
         
-        if (input$radiocal==6){
+        if (input$radiocal==7){
             
             
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity)
+            cal.est.conc.pred.luc <- predict(object=line.model, newdata=predict.amplitude)
             #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
             #cal.est.conc.luc <- cal.est.conc.tab$fit
             #cal.est.conc.luc.up <- cal.est.conc.tab$upr
             #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
             
             
-            val.frame <- data.frame(na.omit(predict.frame$Concentration), predict.intensity$Intensity, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
-            colnames(val.frame) <- c("Concentration", "IntensityOrg", "Intensity", "Prediction")
+            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "Amplitude", "AmplitudeNorm", "Prediction")
         }
+        
         
         if (input$radiocal==7){
             
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity)
+            
+            
+            cal.est.conc.pred.luc <- predict(object=line.model, newdata=predict.amplitude, na.action=na.omit)
             #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
             #cal.est.conc.luc <- cal.est.conc.tab$fit
             #cal.est.conc.luc.up <- cal.est.conc.tab$upr
             #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
             
             
-            val.frame <- data.frame(predict.frame$Concentration, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
-            colnames(val.frame) <- c("Concentration", "Intensity", "Prediction")
+            val.frame <- data.frame(na.omit(predict.frame$Concentration), as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "AmplitudeNorm", "Prediction")
+        }
+        
+        if (input$radiocal==8){
+            
+            
+            cal.est.conc.pred.luc <- predict(object=line.model, newdata=predict.amplitude)
+            #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
+            #cal.est.conc.luc <- cal.est.conc.tab$fit
+            #cal.est.conc.luc.up <- cal.est.conc.tab$upr
+            #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
+            
+            
+            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "Amplitude", "AmplitudeNorm", "Prediction")
+        }
+        
+        
+        if (input$radiocal==9){
+            
+            
+            
+            cal.est.conc.pred.luc <- predict(object=line.model, newdata=predict.amplitude, na.action=na.omit)
+            #cal.est.conc.tab <- data.frame(cal.est.conc.pred.luc)
+            #cal.est.conc.luc <- cal.est.conc.tab$fit
+            #cal.est.conc.luc.up <- cal.est.conc.tab$upr
+            #cal.est.conc.luc.low <- cal.est.conc.tab$lwr
+            
+            
+            val.frame <- data.frame(na.omit(predict.frame$Concentration), as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "AmplitudeNorm", "Prediction")
         }
         
         
@@ -4165,6 +4735,28 @@ content = function(file) {
         }
         
         if (input$radiocal==7){
+            
+            
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity, na.action=na.omit)
+            
+            
+            
+            val.frame <- data.frame(na.omit(predict.frame)$Concentration, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "Intensity", "Prediction")
+        }
+        
+        if (input$radiocal==8){
+            
+            
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity, na.action=na.omit)
+            
+            
+            
+            val.frame <- data.frame(na.omit(predict.frame)$Concentration, predict.intensity$Intensity, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "IntensityOrg", "Intensity", "Prediction")
+        }
+        
+        if (input$radiocal==9){
             
             
             cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity, na.action=na.omit)
@@ -4284,6 +4876,32 @@ content = function(file) {
         }
         
         if(input$radiocal==7){
+            val.frame <- valFrameRandomizedRev()
+            
+            calcurve.plot <- ggplot(data=val.frame, aes(Intensity, Concentration)) +
+            theme_light() +
+            annotate("text", label=lm_eqn(lm(Concentration~., val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            geom_smooth() +
+            geom_point() +
+            scale_x_continuous(paste(element.name, norma), breaks=scales::pretty_breaks()) +
+            scale_y_continuous(paste(element.name, conen), breaks=scales::pretty_breaks()) +
+            coord_cartesian(xlim = rangescalcurverandom$x, ylim = rangescalcurverandom$y, expand = TRUE)
+        }
+        
+        if(input$radiocal==8){
+            val.frame <- valFrameRandomizedRev()
+            
+            calcurve.plot <- ggplot(data=val.frame, aes(Intensity, Concentration)) +
+            theme_light() +
+            annotate("text", label=lm_eqn(lm(Concentration~., val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            geom_smooth() +
+            geom_point() +
+            scale_x_continuous(paste(element.name, norma), breaks=scales::pretty_breaks()) +
+            scale_y_continuous(paste(element.name, conen), breaks=scales::pretty_breaks()) +
+            coord_cartesian(xlim = rangescalcurverandom$x, ylim = rangescalcurverandom$y, expand = TRUE)
+        }
+        
+        if(input$radiocal==9){
             val.frame <- valFrameRandomizedRev()
             
             calcurve.plot <- ggplot(data=val.frame, aes(Intensity, Concentration)) +
@@ -5405,8 +6023,63 @@ content = function(file) {
             as.numeric(1000)
         }
         
-        cal.table <- data.frame(cal.condition, norm.condition, norm.min, norm.max, foresttry, forestmetric, foresttrain, forestnumber, foresttrees, neuralhiddenlayers, neuralhiddenunits, neuralweightdecay, neuralmaxiterations, stringsAsFactors=FALSE)
-        colnames(cal.table) <- c("CalType", "NormType", "Min", "Max", "ForestTry", "ForestMetric", "ForestTC", "ForestNumber", "ForestTrees", "NeuralHL", "NeuralHU", "NeuralWD", "NeuralMI")
+        treedepth <- if(input$radiocal==8 | input$radiocal==9){
+            as.numeric(input$treedepth)
+        } else if(input$radiocal!=8 | input$radiocal!=9){
+            as.numeric(200)
+        }
+        
+        xgbeta <- if(input$radiocal==8 | input$radiocal==9){
+            as.numeric(input$xgbeta)
+        } else if(input$radiocal!=8 | input$radiocal!=9){
+            "0.1-0.3"
+        }
+        
+        xgbgamma <- if(input$radiocal==8 | input$radiocal==9){
+            as.numeric(input$xgbgamma)
+        } else if(input$radiocal!=8 | input$radiocal!=9){
+            "0-0.1"
+        }
+        
+        xgbsubsample <- if(input$radiocal==8 | input$radiocal==9){
+            as.numeric(input$xgbsubsample)
+        } else if(input$radiocal!=8 | input$radiocal!=9){
+            "0.4-0.6"
+        }
+        
+        xgbcolsample <- if(input$radiocal==8 | input$radiocal==9){
+            as.numeric(input$xgbcolsample)
+        } else if(input$radiocal!=8 | input$radiocal!=9){
+            "0.4-0.6"
+        }
+        
+        xgbminchild <- if(input$radiocal==8 | input$radiocal==9){
+            as.numeric(input$xgbminchild)
+        } else if(input$radiocal!=8 | input$radiocal!=9){
+            1
+        }
+        
+        cal.table <- data.frame(
+            CalType=cal.condition,
+            NormType=norm.condition,
+            Min=norm.min,
+            Max=norm.max,
+            ForestTry=foresttry,
+            ForestMetric=forestmetric,
+            ForestTC=foresttrain,
+            ForestNumber=forestnumber,
+            ForestTrees=foresttrees,
+            NeuralHL=neuralhiddenlayers,
+            NeuralHU=neuralhiddenunits,
+            NeuralWD=neuralweightdecay,
+            NeuralMI=neuralmaxiterations,
+            TreeDepth=treedepth,
+            xgbEta=xgbeta,
+            xgbGamma=xgbgamma,
+            xgbSubSample=xgbsubsample,
+            xgbColSample=xgbcolsample,
+            xgbMinChild=xgbminchild,
+            stringsAsFactors=FALSE)
         
         slope.corrections <- input$slope_vars
         intercept.corrections <- input$intercept_vars
