@@ -4593,7 +4593,7 @@ content = function(file) {
             colnames(val.frame) <- c("Concentration", "AmplitudeNorm", "Prediction")
         }
         
-        if (input$radiocal==7){
+        if (input$radiocal==6){
             
             
             cal.est.conc.pred.luc <- predict(object=line.model, newdata=predict.amplitude)
@@ -4726,45 +4726,45 @@ content = function(file) {
         if (input$radiocal==6){
             
             
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity, na.action=na.omit)
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude)
             
             
             
-            val.frame <- data.frame(na.omit(predict.frame)$Concentration, predict.intensity$Intensity, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
-            colnames(val.frame) <- c("Concentration", "IntensityOrg", "Intensity", "Prediction")
+            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "Amplitude", "AmplitudeNorm", "Prediction")
         }
         
         if (input$radiocal==7){
             
             
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity, na.action=na.omit)
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude)
             
             
             
-            val.frame <- data.frame(na.omit(predict.frame)$Concentration, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
-            colnames(val.frame) <- c("Concentration", "Intensity", "Prediction")
+            val.frame <- data.frame(na.omit(predict.frame$Concentration), as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "AmplitudeNorm", "Prediction")
         }
         
         if (input$radiocal==8){
             
             
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity, na.action=na.omit)
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude)
             
             
             
-            val.frame <- data.frame(na.omit(predict.frame)$Concentration, predict.intensity$Intensity, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
-            colnames(val.frame) <- c("Concentration", "IntensityOrg", "Intensity", "Prediction")
+            val.frame <- data.frame(predict.frame$Concentration, predict.amplitude$Amplitude, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "Amplitude", "AmplitudeNorm", "Prediction")
         }
         
         if (input$radiocal==9){
             
             
-            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.intensity, na.action=na.omit)
+            cal.est.conc.pred.luc <- predict(object=line.model , newdata=predict.amplitude)
             
             
             
-            val.frame <- data.frame(na.omit(predict.frame)$Concentration, as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
-            colnames(val.frame) <- c("Concentration", "Intensity", "Prediction")
+            val.frame <- data.frame(na.omit(predict.frame$Concentration), as.vector(cal.est.conc.pred.luc), as.vector(cal.est.conc.pred.luc))
+            colnames(val.frame) <- c("Concentration", "AmplitudeNorm", "Prediction")
         }
         
         
@@ -4865,52 +4865,56 @@ content = function(file) {
         if(input$radiocal==6){
             val.frame <- valFrameRandomizedRev()
             
-            calcurve.plot <- ggplot(data=val.frame, aes(Intensity, Concentration)) +
+            calcurve.plot <- ggplot(data=val.frame, aes(AmplitudeNorm, Concentration)) +
             theme_light() +
-            annotate("text", label=lm_eqn(lm(Concentration~., val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            annotate("text", label=lm_eqn(lm(Concentration~AmplitudeNorm, val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
             geom_smooth() +
             geom_point() +
-            scale_x_continuous(paste(element.name, norma), breaks=scales::pretty_breaks()) +
-            scale_y_continuous(paste(element.name, conen), breaks=scales::pretty_breaks()) +
+            geom_point(aes(AmplitudeNorm, Concentration), data = val.frame, shape = 21, fill = "red", color = "black", alpha = 0.25) +
+            scale_x_continuous(paste(element.name, norma)) +
+            scale_y_continuous(paste(element.name, conen)) +
             coord_cartesian(xlim = rangescalcurverandom$x, ylim = rangescalcurverandom$y, expand = TRUE)
         }
         
         if(input$radiocal==7){
             val.frame <- valFrameRandomizedRev()
             
-            calcurve.plot <- ggplot(data=val.frame, aes(Intensity, Concentration)) +
+            calcurve.plot <- ggplot(data=val.frame, aes(AmplitudeNorm, Concentration)) +
             theme_light() +
-            annotate("text", label=lm_eqn(lm(Concentration~., val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            annotate("text", label=lm_eqn(lm(Concentration~AmplitudeNorm, val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
             geom_smooth() +
             geom_point() +
-            scale_x_continuous(paste(element.name, norma), breaks=scales::pretty_breaks()) +
-            scale_y_continuous(paste(element.name, conen), breaks=scales::pretty_breaks()) +
+            geom_point(aes(AmplitudeNorm, Concentration), data = val.frame, shape = 21, fill = "red", color = "black", alpha = 0.25) +
+            scale_x_continuous(paste(element.name, norma)) +
+            scale_y_continuous(paste(element.name, conen)) +
             coord_cartesian(xlim = rangescalcurverandom$x, ylim = rangescalcurverandom$y, expand = TRUE)
         }
         
         if(input$radiocal==8){
             val.frame <- valFrameRandomizedRev()
             
-            calcurve.plot <- ggplot(data=val.frame, aes(Intensity, Concentration)) +
+            calcurve.plot <- ggplot(data=val.frame, aes(AmplitudeNorm, Concentration)) +
             theme_light() +
-            annotate("text", label=lm_eqn(lm(Concentration~., val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            annotate("text", label=lm_eqn(lm(Concentration~AmplitudeNorm, val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
             geom_smooth() +
             geom_point() +
-            scale_x_continuous(paste(element.name, norma), breaks=scales::pretty_breaks()) +
-            scale_y_continuous(paste(element.name, conen), breaks=scales::pretty_breaks()) +
+            geom_point(aes(AmplitudeNorm, Concentration), data = val.frame, shape = 21, fill = "red", color = "black", alpha = 0.25) +
+            scale_x_continuous(paste(element.name, norma)) +
+            scale_y_continuous(paste(element.name, conen)) +
             coord_cartesian(xlim = rangescalcurverandom$x, ylim = rangescalcurverandom$y, expand = TRUE)
         }
         
         if(input$radiocal==9){
             val.frame <- valFrameRandomizedRev()
             
-            calcurve.plot <- ggplot(data=val.frame, aes(Intensity, Concentration)) +
+            calcurve.plot <- ggplot(data=val.frame, aes(AmplitudeNorm, Concentration)) +
             theme_light() +
-            annotate("text", label=lm_eqn(lm(Concentration~., val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
+            annotate("text", label=lm_eqn(lm(Concentration~AmplitudeNorm, val.frame)), x=0, y=Inf, hjust=0, vjust=1, parse=TRUE)+
             geom_smooth() +
             geom_point() +
-            scale_x_continuous(paste(element.name, norma), breaks=scales::pretty_breaks()) +
-            scale_y_continuous(paste(element.name, conen), breaks=scales::pretty_breaks()) +
+            geom_point(aes(AmplitudeNorm, Concentration), data = val.frame, shape = 21, fill = "red", color = "black", alpha = 0.25) +
+            scale_x_continuous(paste(element.name, norma)) +
+            scale_y_continuous(paste(element.name, conen)) +
             coord_cartesian(xlim = rangescalcurverandom$x, ylim = rangescalcurverandom$y, expand = TRUE)
         }
         
