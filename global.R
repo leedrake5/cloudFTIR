@@ -1,9 +1,13 @@
-list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "broom", "shinyjs", "gridExtra", "dtplyr", "formattable", "XML", "corrplot", "scales", "rmarkdown", "markdown", "peakPick", "shinyWidgets", "data.table", "baseline", "pls", "prospectr", "doSNOW", "parallel", "caret", "wavelets", "hexView", "GSIF", "gstat", "nnet", "neuralnet", "grid", "gridExtra", "compiler", "xgboost")
+list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "broom", "shinyjs", "gridExtra", "dtplyr", "formattable", "XML", "corrplot", "scales", "rmarkdown", "markdown", "peakPick", "shinyWidgets", "data.table", "baseline", "pls", "prospectr", "doSNOW", "parallel", "caret", "wavelets", "hexView", "GSIF", "gstat", "nnet", "neuralnet", "grid", "gridExtra", "compiler", "xgboost", "peakPick")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
 if ("soil.spec" %in% installed.packages()[,"Package"]==FALSE){
-    install.packages("soil.spec_2.1.4.tar", repos=NULL, type="source")
+    install.packages("Packages/soil.spec_2.1.3.tgz", repos=NULL, type="binary")
+}
+
+if ("peakPick" %in% installed.packages()[,"Package"]==FALSE){
+    install.packages("Packages/peakPick_0.11.tar.gz", repos=NULL, type="source")
 }
 
 library(soil.spec)
@@ -135,7 +139,7 @@ my_combine <- function (...)
 
 options(digits=4)
 options(warn=-1)
-assign("last.warning", NULL, envir = baseenv())
+#assign("last.warning", NULL, envir = baseenv())
 
 keep_singles <- function(v){
     v[!(v %in% v[duplicated(v)])]
@@ -281,6 +285,17 @@ readOpusData <- function(filepath, filename){
     )
     
     return(file.frame)
+    
+}
+
+readJascoData <- function(filepath, filename=NULL){
+    
+    if(is.null(filename)){filename <- basename(filepath)}
+    
+    ir_file <- read.delim2(filepath)[19:22519,]
+    ir_file <- data.frame(Spectrum=gsub(".txt", "", filename), Wavenumber=as.numeric(ir_file[,1]), Amplitude=as.numeric(ir_file[,2]))
+    
+    return(ir_file)
     
 }
 
