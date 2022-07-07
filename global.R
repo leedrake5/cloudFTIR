@@ -16,15 +16,6 @@ library(soil.spec)
 #assign("last.warning", NULL, envir = baseenv())
 
 library(shiny)
-library(ggplot2)
-library(pbapply)
-library(reshape2)
-library(dplyr)
-library(DT)
-library(XML)
-library(soil.spec)
-library(parallel)
-library(caret)
 library(data.table)
 library(compiler)
 library(nnet)
@@ -32,6 +23,37 @@ library(neuralnet)
 library(xgboost)
 library(gridExtra)
 library(grid)
+library(shiny)
+library(ggplot2)
+library(pbapply)
+library(reshape2)
+library(dplyr)
+library(plyr)
+library(data.table)
+library(DT)
+library(gridExtra)
+library(rhandsontable)
+library(Cairo)
+library(broom)
+library(shinyjs)
+library(formattable)
+library(markdown)
+library(rmarkdown)
+library(XML)
+library(corrplot)
+library(scales)
+library(TTR)
+library(peakPick)
+library(soil.spec)
+library(parallel)
+library(caret)
+library(randomForest)
+library(DescTools)
+library(prospectr)
+library(pls)
+library(baseline)
+library(doParallel)
+pdf(NULL)
 
 Sys.setenv(R_MAX_VSIZE = 16e9)
 
@@ -965,7 +987,19 @@ spectra_table_ftir <- function(spectra, concentration){
 
 spectra_simp_prep_ftir <- function(spectra, compression=0){
     
-    spectra$Wavenumber <- round(spectra$Wavenumber, compression)
+    spectra$Wavenumber <- if(compression=="100 cm"){ round(spectra$Wavenumber/0.1)*0.1
+    } else if(compression=="50 cm"){
+        round(spectra$Wavenumber/0.05)*0.05
+    } else if(compression=="25 cm"){
+        round(spectra$Wavenumber/0.025)*0.025
+    } else if(is.numeric(compression)){
+        round(spectra$Wavenumber, compression)
+    } else {
+        spectra$Wavenumber
+    }
+
+    
+    #spectra$Wavenumber <- round(spectra$Wavenumber, compression)
     spectra <- data.table(spectra)
     spectra.aggregate <- spectra[, list(Amplitude=mean(Amplitude, na.rm = TRUE)), by = list(Spectrum,Wavenumber)]
     
@@ -979,7 +1013,17 @@ spectra_simp_prep_ftir <- function(spectra, compression=0){
 
 spectra_tc_prep_ftir <- function(spectra, compression=0){
     
-    spectra$Wavenumber <- round(spectra$Wavenumber, compression)
+    spectra$Wavenumber <- if(compression=="100 cm"){ round(spectra$Wavenumber/0.1)*0.1
+    } else if(compression=="50 cm"){
+        round(spectra$Wavenumber/0.05)*0.05
+    } else if(compression=="25 cm"){
+        round(spectra$Wavenumber/0.025)*0.025
+    } else if(is.numeric(compression)){
+        round(spectra$Wavenumber, compression)
+    } else {
+        spectra$Wavenumber
+    }
+
     
     spectra <- data.table(spectra)
     spectra.aggregate <- spectra[, list(Amplitude=mean(Amplitude, na.rm = TRUE)), by = list(Spectrum,Wavenumber)]
@@ -1008,7 +1052,16 @@ spectra_comp_prep_ftir <- function(spectra, compression=0, norm.min, norm.max){
     compton.frame.ag <- aggregate(list(compton.frame$Compton), by=list(compton.frame$Spectrum), FUN="sum")
     colnames(compton.frame.ag) <- c("Spectrum", "Compton")
     
-    spectra$Wavenumber <- round(spectra$Wavenumber, compression)
+    spectra$Wavenumber <- if(compression=="100 cm"){ round(spectra$Wavenumber/0.1)*0.1
+    } else if(compression=="50 cm"){
+        round(spectra$Wavenumber/0.05)*0.05
+    } else if(compression=="25 cm"){
+        round(spectra$Wavenumber/0.025)*0.025
+    } else if(is.numeric(compression)){
+        round(spectra$Wavenumber, compression)
+    } else {
+        spectra$Wavenumber
+    }
     
     spectra <- data.table(spectra)
     spectra.aggregate <- spectra[, list(Amplitude=mean(Amplitude, na.rm = TRUE)), by = list(Spectrum,Wavenumber)]
