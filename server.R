@@ -25,6 +25,9 @@ shinyServer(function(input, output, session) {
         } else if(input$filetype=="Jasco") {
             fileInput('file1', 'Choose Jasco File', multiple=TRUE,
             accept=c(".txt"))
+        } else if(input$filetype=="Jasco2") {
+            fileInput('file1', 'Choose Jasco File', multiple=TRUE,
+            accept=c(".txt"))
         }
         
     })
@@ -114,6 +117,23 @@ shinyServer(function(input, output, session) {
         names <- inFile$name
         
         myfiles.frame <- as.data.frame(do.call(rbind, pblapply(seq(1, n, 1), function(x) readJascoData(filepath=inFile$datapath[x], filename=inFile$name[x]), cl=my.cores)))
+        
+        myfiles.frame$Wavenumber <- myfiles.frame$Wavenumber + gainshiftHold()
+        
+        myfiles.frame
+        
+        
+    })
+    
+    readJasco2 <- reactive({
+        
+        inFile <- input$file1
+        if (is.null(inFile)) return(NULL)
+        
+        n <- length(inFile$datapath)
+        names <- inFile$name
+        
+        myfiles.frame <- as.data.frame(do.call(rbind, pblapply(seq(1, n, 1), function(x) readJascoData2(filepath=inFile$datapath[x], filename=inFile$name[x]), cl=my.cores)))
         
         myfiles.frame$Wavenumber <- myfiles.frame$Wavenumber + gainshiftHold()
         
@@ -222,6 +242,8 @@ shinyServer(function(input, output, session) {
                 readOpus()
             } else if(input$filetype=="Jasco"){
                 readJasco()
+            } else if(input$filetype=="Jasco2"){
+                readJasco2()
             }
             
                 data
@@ -1399,6 +1421,8 @@ shinyServer(function(input, output, session) {
         } else if(input$filetype=="CSV"){
             "Spectra"
         } else if(input$filetype=="Jasco"){
+            "Spectra"
+        } else if(input$filetype=="Jasco2"){
             "Spectra"
         }
         
@@ -6363,6 +6387,8 @@ content = function(file) {
             } else if(input$valfiletype=="CSV"){
                 "Spectra"
             } else if(input$valfiletype=="Jasco"){
+                "Spectra"
+            } else if(input$valfiletype=="Jasco2"){
                 "Spectra"
             }
             

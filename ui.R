@@ -75,7 +75,7 @@ tags$hr(),
 
 uiOutput('filegrab'),
 
-selectInput('filetype', label="Filetype", c("DPT", "CSV", "Opus", "Jasco"), selected="Opus"),
+selectInput('filetype', label="Filetype", c("DPT", "CSV", "Opus", "Jasco", "Jasco2"), selected="Opus"),
 
 tags$hr(),
 

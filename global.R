@@ -321,7 +321,16 @@ readJascoData <- function(filepath, filename=NULL){
     
 }
 
-
+readJascoData2 <- function(filepath, filename=NULL){
+    
+    if(is.null(filename)){filename <- basename(filepath)}
+    
+    ir_file <- read.delim2(filepath)[19:1694,]
+    ir_file <- data.frame(Spectrum=gsub(".txt", "", filename), Wavenumber=as.numeric(ir_file[,1]), Amplitude=as.numeric(ir_file[,2]))
+    
+    return(ir_file)
+    
+}
 
     
     
